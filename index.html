@@ -3,7 +3,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Lumina — Laboratório de Mesa Real</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -12,6 +12,8 @@
             font-family: 'Inter', sans-serif;
             background-color: #0f172a;
             color: #f8fafc;
+            overflow-x: hidden;
+            overscroll-behavior-y: contain;
         }
         h1, h2, h3, .font-cinzel {
             font-family: 'Cinzel', serif;
@@ -20,14 +22,34 @@
             perspective: 1000px;
         }
         .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
+            width: 4px;
+            height: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-            background: #1e293b;
+            background: rgba(30, 41, 59, 0.5);
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #475569;
+            background: #4f46e5;
             border-radius: 10px;
+        }
+        
+        /* Orientação Paisagem Sugerida */
+        @media (orientation: portrait) and (max-width: 768px) {
+            #landscape-suggestion {
+                display: flex !important;
+            }
+        }
+
+        /* Glassmorphism effects */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        /* Botão flutuante mobile */
+        .mobile-mentor-trigger {
+            box-shadow: 0 0 20px rgba(79, 70, 229, 0.4);
         }
     </style>
 <script type="importmap">
@@ -43,6 +65,14 @@
 </script>
 </head>
 <body>
+    <div id="landscape-suggestion" class="fixed inset-0 z-[100] bg-slate-950 flex-col items-center justify-center p-8 text-center hidden">
+        <div class="w-20 h-20 bg-indigo-600/20 rounded-full flex items-center justify-center mb-6 animate-pulse">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-400 rotate-90"><rect width="18" height="12" x="3" y="6" rx="2"/><path d="M12 9v6"/></svg>
+        </div>
+        <h2 class="text-xl font-cinzel font-bold text-indigo-100 mb-2">Gire seu dispositivo</h2>
+        <p class="text-slate-400 text-sm leading-relaxed">O Laboratório de Mesa Real é melhor visualizado em modo paisagem para garantir a precisão técnica das 36 casas.</p>
+        <button onclick="document.getElementById('landscape-suggestion').style.display='none'" class="mt-8 text-xs font-black uppercase tracking-widest text-slate-500 border-b border-slate-800 pb-1">Continuar assim mesmo</button>
+    </div>
     <div id="root"></div>
 </body>
 </html>

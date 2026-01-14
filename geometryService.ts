@@ -38,7 +38,6 @@ export const getDiagonaisSuperiores = (index: number) => {
   const col = index % 8;
   const results: number[] = [];
   
-  // Superior Esquerda e Superior Direita (apenas um nível para modulação imediata)
   [[row - 1, col - 1], [row - 1, col + 1]].forEach(([r, c]) => {
     if (r >= 0 && r < 4 && c >= 0 && c < 8) results.push(r * 8 + c);
   });
@@ -51,7 +50,6 @@ export const getDiagonaisInferiores = (index: number) => {
   const col = index % 8;
   const results: number[] = [];
   
-  // Inferior Esquerda e Inferior Direita
   [[row + 1, col - 1], [row + 1, col + 1]].forEach(([r, c]) => {
     if (r >= 0 && r < 4 && c >= 0 && c < 8) results.push(r * 8 + c);
   });
@@ -59,5 +57,14 @@ export const getDiagonaisInferiores = (index: number) => {
 };
 
 export const getOposicaoRelogio = (index: number) => {
+  if (index >= 12) return -1;
   return (index + 6) % 12;
+};
+
+export const getEixoConceitualRelogio = (index: number): string | null => {
+  if (index === 2 || index === 8) return "Eixo Horizontal (Expansão e Visão de Futuro)";
+  if (index === 5 || index === 11) return "Eixo Vertical (Inconsciente e Espiritualidade)";
+  if (index === 1 || index === 7) return "Eixo Social (Matéria vs Transformação)";
+  if (index === 3 || index === 9) return "Eixo Emocional (Base vs Realização)";
+  return null;
 };
