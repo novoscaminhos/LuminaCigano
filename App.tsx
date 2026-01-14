@@ -14,7 +14,43 @@ import { Polarity, Timing, LenormandCard, LenormandHouse, SpreadType, StudyLevel
 import { getDetailedCardAnalysis } from './geminiService';
 import * as Geometry from './geometryService';
 
-const getCardImageUrl = (id: number) => `https://api.dicebear.com/7.x/shapes/svg?seed=lenormand-art-${id}&backgroundColor=0f172a&shape1Color=4f46e5&shape2Color=818cf8&shape3Color=312e81`;
+// ===============================
+// Caminho padrão da imagem da carta
+// ===============================
+export const getCardImageUrl = (id: number): string => {
+  const base = import.meta.env.BASE_URL || '/';
+  return `${base}assets/${id.toString().padStart(2, '0')}.jpg`;
+};
+
+// ===============================
+// Handler robusto de fallback
+// Ordem:
+// 1) Imagem da carta
+// 2) fallback.jpg (local)
+// 3) placeholder externo
+// ===============================
+export const handleImageError = (
+  e: React.SyntheticEvent<HTMLImageElement, Event>
+) => {
+  const img = e.currentTarget;
+  if (!img) return;
+
+  const base = import.meta.env.BASE_URL || '/';
+  const fallbackLocal = `${base}assets/fallback.jpg`;
+
+  /**
+   * Usamos data-fallback para evitar loops:
+   * - undefined → imagem original falhou
+   * - "true"    → fallback já aplicado
+   */
+  if (img.dataset.fallback === 'true') {
+    img.onerror = null;
+    return;
+  }
+
+  img.dataset.fallback = 'true';
+  img.src = fallbackLocal;
+};
 
 const generateShuffledArray = (size: number = 36) => {
   const ids = Array.from({length: 36}, (_, i) => i + 1);
@@ -59,6 +95,13 @@ const RelatedCardMini: React.FC<{ card: LenormandCard | null; houseName: string;
     }
   };
 
+  const getTimingIndicator = (timing?: Timing) => {
+    if (!timing) return '';
+    if (timing === Timing.SLOW || timing === Timing.VERY_LONG) return '🔴';
+    if (timing === Timing.FAST || timing === Timing.VERY_FAST || timing === Timing.INSTANT) return '🟢';
+    return '🟡';
+  };
+
   return (
     <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-800/60 flex gap-3 items-start group hover:border-indigo-500/30 transition-all relative">
       {label && (
@@ -72,7 +115,8 @@ const RelatedCardMini: React.FC<{ card: LenormandCard | null; houseName: string;
             <img 
               src={getCardImageUrl(card.id)} 
               alt={card.name} 
-              className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-70 transition-opacity"
+              onError={handleImageError}
+              className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-90 transition-opacity"
             />
             <div className="absolute top-1 right-1 w-2 h-2 rounded-full border border-black/20 z-10" style={{ backgroundColor: getPolarityColor(card.polarity).replace('bg-', '') }}></div>
             <span className="text-[10px] font-black text-indigo-100 z-10 drop-shadow-md">{card.id}</span>
@@ -85,7 +129,12 @@ const RelatedCardMini: React.FC<{ card: LenormandCard | null; houseName: string;
       <div className="flex-grow min-w-0">
         <div className="flex justify-between items-center mb-1">
           <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest truncate">CASA {houseId}: {houseName}</span>
-          {card && <div className={`w-1.5 h-1.5 rounded-full ${getPolarityColor(card.polarity)}`}></div>}
+          {card && (
+            <div className="flex items-center gap-1">
+              <span className="text-[9px]">{getTimingIndicator(card.timingSpeed)}</span>
+              <div className={`w-1.5 h-1.5 rounded-full ${getPolarityColor(card.polarity)}`}></div>
+            </div>
+          )}
         </div>
         <h4 className="text-[10px] font-bold text-slate-200 truncate">{card ? card.name : 'Vazio'}</h4>
         <p className="text-[9px] text-slate-500 leading-tight italic line-clamp-2 mt-1">
@@ -147,7 +196,14 @@ const CardVisual: React.FC<{
       )}
 
       <div className="absolute inset-0 pointer-events-none">
-        {card && <img src={getCardImageUrl(card.id)} alt={card.name} className={`w-full h-full object-cover transition-opacity duration-700 ${isThemeCard ? 'opacity-[0.4]' : 'opacity-[0.15] group-hover:opacity-[0.25]'}`} />}
+        {card && (
+          <img 
+            src={getCardImageUrl(card.id)} 
+            alt={card.name} 
+            onError={handleImageError}
+            className={`w-full h-full object-cover transition-all duration-700 ${isThemeCard ? 'opacity-[0.55]' : 'opacity-[0.25] group-hover:opacity-[0.45]'}`} 
+          />
+        )}
       </div>
       <div className="absolute top-1 right-1 flex items-center gap-1 z-20 scale-75 md:scale-100">
          <span className="text-[8px] md:text-[10px]">{getTimingIndicator(card?.timingSpeed)}</span>
@@ -157,7 +213,7 @@ const CardVisual: React.FC<{
         <span className="text-[7px] md:text-[9px] font-black text-slate-500 uppercase">CASA {houseId}</span>
       </div>
       {card ? (
-        <div className={`absolute inset-0 flex flex-col p-2 md:p-3 bg-gradient-to-t from-slate-950 via-slate-900/10 to-transparent`}>
+        <div className={`absolute inset-0 flex flex-col p-2 md:p-3 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent`}>
           <div className="flex-grow flex flex-col items-center justify-center text-center mt-2">
             <span className={`text-[8px] md:text-[11px] font-cinzel font-bold text-white uppercase leading-tight tracking-wider drop-shadow-md ${isThemeCard ? 'scale-110' : ''}`}>{card.name}</span>
           </div>
@@ -294,7 +350,7 @@ const App: React.FC = () => {
   return (
     <div className={`min-h-screen flex flex-col md:flex-row ${darkMode ? 'bg-slate-950 text-slate-200' : 'bg-slate-50 text-slate-900'} transition-colors overflow-hidden selection:bg-indigo-500/30 font-inter`}>
       
-      {/* SIDEBAR ESQUERDA - Sticky e com Hover para desktop */}
+      {/* SIDEBAR ESQUERDA */}
       <aside 
         onMouseEnter={() => setSidebarCollapsed(false)}
         onMouseLeave={() => setSidebarCollapsed(true)}
@@ -312,20 +368,27 @@ const App: React.FC = () => {
           <NavItem icon={<Clock size={18}/>} label="Relógio" active={view === 'board' && spreadType === 'relogio'} collapsed={sidebarCollapsed} onClick={() => {setView('board'); setSpreadType('relogio');}} />
           <NavItem icon={<BookOpen size={18}/>} label="Fundamentos" active={view === 'fundamentals'} collapsed={sidebarCollapsed} onClick={() => setView('fundamentals')} />
           
-          <div className={`pt-4 mt-4 border-t border-slate-800 flex flex-col gap-2 ${sidebarCollapsed ? 'items-center' : 'px-2'}`}>
-            {!sidebarCollapsed && <span className="text-[9px] font-black text-slate-500 uppercase px-2 mb-1">Nível de Estudo</span>}
-            <div className={`grid gap-1 ${sidebarCollapsed ? 'grid-cols-1' : 'grid-cols-1'}`}>
-              {(['Iniciante', 'Intermediário', 'Avançado'] as StudyLevel[]).map(l => (
-                <button 
-                  key={l} 
-                  onClick={() => setDifficultyLevel(l)} 
-                  className={`text-[9px] font-bold p-2 rounded-lg text-left transition-all ${difficultyLevel === l ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'} ${sidebarCollapsed ? 'w-8 h-8 flex items-center justify-center p-0' : ''}`}
-                  title={sidebarCollapsed ? l : ''}
-                >
-                  {sidebarCollapsed ? l[0] : l}
-                </button>
-              ))}
-            </div>
+          <div className={`pt-4 mt-4 border-t border-slate-800 flex flex-col gap-2 ${sidebarCollapsed ? 'items-center mt-8' : 'px-2'}`}>
+            {!sidebarCollapsed ? (
+              <>
+                <span className="text-[9px] font-black text-slate-500 uppercase px-2 mb-1">Nível de Estudo</span>
+                <div className="grid gap-1 grid-cols-1">
+                  {(['Iniciante', 'Intermediário', 'Avançado'] as StudyLevel[]).map(l => (
+                    <button 
+                      key={l} 
+                      onClick={() => setDifficultyLevel(l)} 
+                      className={`text-[9px] font-bold p-2 rounded-lg text-left transition-all ${difficultyLevel === l ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-800'}`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="mt-8 flex flex-col items-center opacity-40 pointer-events-none">
+                 <span className="font-cinzel text-[12px] font-bold uppercase tracking-[0.6em] vertical-text">NÍVEL</span>
+              </div>
+            )}
           </div>
         </nav>
 
@@ -355,7 +418,7 @@ const App: React.FC = () => {
         </div>
       </aside>
 
-      {/* ÁREA CENTRAL - Scrollable */}
+      {/* ÁREA CENTRAL */}
       <main className="flex-grow flex flex-col h-screen overflow-y-auto custom-scrollbar relative">
         <header className="h-14 md:h-16 border-b border-slate-800/40 flex items-center justify-between px-4 md:px-10 z-20 glass-panel sticky top-0">
            <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
@@ -401,8 +464,7 @@ const App: React.FC = () => {
                    ))}
                 </div>
                 <div className="flex flex-col items-center gap-4 pt-6 border-t border-slate-800/40">
-                   <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Veredito Final</span>
-                   {/* Ajuste de tamanho: grid-cols-4 para manter o tamanho das cartas da mesa */}
+                   <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4">VEREDITO FINAL</h3>
                    <div className="grid grid-cols-8 gap-1.5 md:gap-3 w-full">
                       <div className="col-span-2 hidden md:block"></div>
                       {board.slice(32, 36).map((cardId, index) => (
@@ -490,11 +552,11 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* PAINEL DO MENTOR - Fixo à direita, Sticky e com Hover */}
+      {/* PAINEL DO MENTOR - Desktop: pure horizontal transition */}
       <aside 
-        className={`fixed md:sticky top-0 inset-y-0 right-0 z-50 md:z-30 h-screen transition-all duration-500 ease-in-out bg-slate-900 border-l border-slate-800 flex flex-col overflow-hidden ${mentorPanelOpen ? 'w-full md:w-[32rem]' : 'translate-y-full md:translate-y-0 md:w-16'}`}
+        className={`fixed md:sticky top-0 inset-y-0 right-0 z-50 md:z-30 h-screen transition-all duration-500 ease-in-out bg-slate-900 border-l border-slate-800 flex flex-col overflow-hidden ${mentorPanelOpen ? 'w-full md:w-[32rem] translate-y-0' : 'translate-y-full md:translate-y-0 md:w-16'}`}
       >
-        <div className="p-4 md:px-6 border-b border-slate-800 flex items-center justify-between glass-panel sticky top-0 z-10 shadow-lg h-14 md:h-16 shrink-0 overflow-hidden">
+        <div className={`p-4 md:px-6 border-b border-slate-800 flex items-center justify-between glass-panel sticky top-0 z-50 shadow-lg h-14 md:h-16 shrink-0 transition-opacity duration-300 ${!mentorPanelOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
            <button 
              onClick={() => setMentorPanelOpen(!mentorPanelOpen)} 
              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors z-20 shrink-0"
@@ -502,145 +564,160 @@ const App: React.FC = () => {
               {mentorPanelOpen ? <ChevronRight size={18}/> : <ChevronLeft size={18}/>}
            </button>
            
-           <div className={`flex items-center gap-3 transition-opacity duration-300 ${!mentorPanelOpen ? 'opacity-0 pointer-events-none' : 'opacity-100 flex-grow justify-center'}`}>
+           <div className={`flex items-center gap-3 flex-grow justify-center`}>
               <ActivityIcon className="text-emerald-500 shrink-0" size={18} />
               <h2 className="text-xs font-bold font-cinzel uppercase tracking-[0.2em] text-slate-100 whitespace-nowrap">Mentor LUMINA</h2>
            </div>
 
-           <button 
-             onClick={() => setMentorPanelOpen(false)} 
-             className={`p-2 text-slate-400 hover:text-rose-500 transition-all z-20 shrink-0 ${!mentorPanelOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-           >
-              <X size={20}/>
-           </button>
+           <div className="w-10"></div> {/* Espaçador para compensar a remoção do botão X e manter centralizado */}
         </div>
 
-        <div className={`flex-grow overflow-y-auto custom-scrollbar p-4 md:p-8 space-y-8 pb-32 transition-opacity duration-300 ${!mentorPanelOpen ? 'md:opacity-0' : 'opacity-100'}`}>
+        <div className={`flex-grow flex flex-col overflow-hidden relative transition-opacity duration-300 ${!mentorPanelOpen ? 'opacity-0' : 'opacity-100'}`}>
           {selectedHouse !== null ? (
-            <div className="space-y-8 animate-in slide-in-from-bottom duration-500">
-               {/* Card Info */}
-               <div className="bg-slate-950/60 p-6 md:p-8 rounded-[2rem] border border-slate-800/80 relative overflow-hidden shadow-2xl">
-                  <div className="relative z-10">
-                    <div className="flex justify-between items-start">
-                       <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2 block">CARTA {selectedCard?.id}</span>
-                       <button 
-                          onClick={() => setManualThemeIndex(selectedHouse === activeThemeIndex ? null : selectedHouse)}
-                          className={`p-2 rounded-lg transition-all ${activeThemeIndex === selectedHouse ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'bg-slate-800 text-slate-500 hover:text-amber-400'}`}
-                          title="Definir Manualmente como Foco"
-                       >
-                          <Target size={16}/>
-                       </button>
-                    </div>
-                    <h3 className="text-2xl md:text-3xl font-cinzel font-bold text-white mb-4 tracking-wider drop-shadow-lg">{selectedCard?.name || 'Vazio'}</h3>
-                    <div className="bg-indigo-600/10 p-4 rounded-2xl border border-indigo-500/20 mb-6 shadow-inner">
-                       <p className="text-xs text-slate-300 leading-relaxed font-medium italic">{selectedCard?.briefInterpretation || 'Posição livre para leitura.'}</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                       <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 text-[10px] font-bold text-slate-400 text-center uppercase tracking-widest">{selectedCard?.polarity || 'Polaridade'}</div>
-                       <div className={`p-3 rounded-xl border text-[10px] font-bold text-center uppercase tracking-widest ${selectedCard?.timingCategory === 'Acelera' ? 'border-emerald-500/30 text-emerald-400' : 'border-slate-800 text-slate-500'}`}>{selectedCard?.timingSpeed || 'Tempo'}</div>
-                    </div>
-                  </div>
-                  {selectedCard && <img src={getCardImageUrl(selectedCard.id)} className="absolute -right-4 top-1/2 -translate-y-1/2 w-32 h-44 opacity-10 mix-blend-overlay rotate-12 pointer-events-none" />}
-               </div>
-
-               {/* House Context */}
-               <div className="bg-indigo-900/10 p-6 md:p-8 rounded-[2rem] border border-indigo-500/20 shadow-md">
-                  <span className="text-[9px] font-black text-indigo-300 uppercase block mb-1 tracking-[0.2em]">CASA {selectedHouse + 1}: {currentHouse?.name}</span>
-                  <p className="text-xs md:text-sm text-slate-300 leading-relaxed font-medium mb-4">{currentHouse?.technicalDescription}</p>
-                  {spreadType === 'relogio' && currentHouse && (
-                    <div className="pt-4 border-t border-indigo-500/20">
-                      <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest block mb-2">Pergunta-Chave:</span>
-                      <p className="text-xs text-indigo-200 italic">"O que o ciclo de {currentHouse.month} ({currentHouse.zodiac}) pede para ${readingTheme.toLowerCase()}?"</p>
-                    </div>
-                  )}
-               </div>
-
-               {/* Opposition Context (Relógio Only) */}
-               {spreadType === 'relogio' && oppIndex !== null && (
-                 <div className="space-y-4">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">Eixo de Oposição (180°)</span>
-                    <RelatedCardMini 
-                      card={oppCard || null} 
-                      houseName={oppHouse?.name || "Oposta"} 
-                      houseId={oppIndex + 1} 
-                      label="Conflito & Complemento"
-                      labelColor="bg-rose-500/20 text-rose-400 border-rose-500/20"
-                    />
-                    <div className="p-4 bg-slate-950/40 rounded-2xl border border-slate-800 text-[10px] text-slate-400 leading-relaxed italic">
-                       Eixo: {Geometry.getEixoConceitualRelogio(selectedHouse) || "Eixo de Transição"}
-                    </div>
-                 </div>
-               )}
-
-               {/* Geometries Section (Mesa Real Only) */}
-               {spreadType === 'mesa-real' && (
-                  <div className="space-y-4">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">Geometria do Campo</span>
-                    <div className="space-y-3">
-                      {diagUp.map((item, i) => <RelatedCardMini key={`up-${i}`} card={item.card} houseName={item.house.name} houseId={item.idx + 1} label="Campo de Ascensão" labelColor="bg-orange-500/20 text-orange-400 border-orange-500/20" />)}
-                      {diagDown.map((item, i) => <RelatedCardMini key={`dn-${i}`} card={item.card} houseName={item.house.name} houseId={item.idx + 1} label="Campo de Sustentação" labelColor="bg-indigo-500/20 text-indigo-400 border-indigo-500/20" />)}
-                      {mirrorCards.map((item, i) => <RelatedCardMini key={`mi-${i}`} card={item.card} houseName={item.house.name} houseId={item.idx + 1} label="Espelhamento" />)}
-                      {knightCards.map((item, i) => <RelatedCardMini key={`kn-${i}`} card={item.card} houseName={item.house.name} houseId={item.idx + 1} label="Salto do Cavalo" />)}
-                    </div>
-                  </div>
-               )}
-
-               {/* AI Analysis */}
-               <div className="pt-6 border-t border-slate-800">
-                  {!cardAnalysis ? (
-                    <button onClick={runMentorAnalysis} disabled={isAiLoading || !selectedCard} className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-5 rounded-3xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-3 group shadow-xl shadow-indigo-600/20 transition-all active:scale-[0.98]">
-                      {isAiLoading ? <Loader2 size={18} className="animate-spin" /> : <Wand2 size={18} />}
-                      <span>{spreadType === 'relogio' ? 'Análise Técnica do Ciclo' : 'Análise Técnica Completa'}</span>
-                    </button>
-                  ) : (
-                    <div className="space-y-4 animate-in fade-in zoom-in-95 duration-700">
-                      <div className="flex justify-between items-center px-4">
-                        <h4 className="text-[11px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2"><MessageSquare size={14}/> Síntese do Mentor</h4>
-                        <button onClick={() => setCardAnalysis(null)} className="text-[10px] text-slate-500 underline uppercase tracking-tighter">Limpar</button>
-                      </div>
-                      <div className="bg-slate-950/80 rounded-[2.5rem] p-6 md:p-8 border border-slate-800 shadow-inner">
-                        <div className="prose prose-invert prose-xs md:prose-sm card-interpretation whitespace-pre-wrap leading-relaxed">{cardAnalysis}</div>
-                      </div>
-                    </div>
-                  )}
-               </div>
-
-               {/* Relógio Stats Footer */}
-               {spreadType === 'relogio' && (
-                 <div className="pt-8 mt-8 border-t border-slate-800/40">
-                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-4 block">Vibração Dominante do Ciclo</span>
-                    <div className="grid grid-cols-3 gap-2">
-                       <div className="flex flex-col items-center bg-emerald-500/10 p-3 rounded-2xl border border-emerald-500/20">
-                          <span className="text-xl font-black text-emerald-400">{polarityStats.positive}</span>
-                          <span className="text-[7px] font-bold text-emerald-500/60 uppercase">Positivas</span>
-                       </div>
-                       <div className="flex flex-col items-center bg-slate-800/10 p-3 rounded-2xl border border-slate-800/20">
-                          <span className="text-xl font-black text-slate-400">{polarityStats.neutral}</span>
-                          <span className="text-[7px] font-bold text-slate-500/60 uppercase">Neutras</span>
-                       </div>
-                       <div className="flex flex-col items-center bg-rose-500/10 p-3 rounded-2xl border border-rose-500/20">
-                          <span className="text-xl font-black text-rose-400">{polarityStats.negative}</span>
-                          <span className="text-[7px] font-bold text-rose-500/60 uppercase">Negativas</span>
+            <>
+              {/* Seção Superior: Visualização da Carta (Metade superior) */}
+              <div className="h-[45%] md:h-[50%] shrink-0 bg-slate-900/95 border-b border-slate-800/80 shadow-lg overflow-y-auto custom-scrollbar flex flex-col items-center justify-center">
+                 <div className="p-4 md:p-6 w-full max-w-sm">
+                    <div className="bg-slate-950/60 p-4 md:p-6 rounded-[2rem] border border-slate-800/80 relative overflow-hidden shadow-2xl flex flex-col items-center text-center">
+                       {selectedCard && (
+                         <div className="mb-4 aspect-[3/4.2] w-full max-w-[70px] md:max-w-[90px] mx-auto rounded-xl border-2 border-indigo-500/30 overflow-hidden shadow-[0_0_20px_rgba(79,70,229,0.2)] bg-slate-900 shrink-0">
+                           <img 
+                             src={getCardImageUrl(selectedCard.id)} 
+                             alt={selectedCard.name} 
+                             onError={handleImageError}
+                             className="w-full h-full object-cover" 
+                           />
+                         </div>
+                       )}
+                       
+                       <div className="relative z-10 w-full">
+                         <div className="flex justify-between items-start mb-1 px-2">
+                            <span className="text-[7px] md:text-[8px] font-black text-indigo-400 uppercase tracking-widest block">CARTA {selectedCard?.id}</span>
+                            <button 
+                               onClick={() => setManualThemeIndex(selectedHouse === activeThemeIndex ? null : selectedHouse)}
+                               className={`p-1 rounded-lg transition-all ${activeThemeIndex === selectedHouse ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'bg-slate-800 text-slate-500 hover:text-amber-400'}`}
+                               title="Definir Manualmente como Foco"
+                            >
+                               <Target size={12}/>
+                            </button>
+                         </div>
+                         <h3 className="text-base md:text-lg font-cinzel font-bold text-white mb-2 tracking-wider drop-shadow-lg">{selectedCard?.name || 'Vazio'}</h3>
+                         <div className="bg-indigo-600/10 p-2 md:p-3 rounded-2xl border border-indigo-500/20 mb-3 shadow-inner">
+                            <p className="text-[8px] md:text-[10px] text-slate-300 leading-relaxed font-medium italic">{selectedCard?.briefInterpretation || 'Posição livre para leitura.'}</p>
+                         </div>
+                         <div className="grid grid-cols-2 gap-2">
+                            <div className="p-1.5 bg-slate-900/80 rounded-xl border border-slate-800 text-[7px] md:text-[8px] font-bold text-slate-400 uppercase tracking-widest">{selectedCard?.polarity || 'Polaridade'}</div>
+                            <div className={`p-1.5 rounded-xl border text-[7px] md:text-[8px] font-bold uppercase tracking-widest ${selectedCard?.timingCategory === 'Acelera' ? 'border-emerald-500/30 text-emerald-400' : 'border-slate-800 text-slate-500'}`}>{selectedCard?.timingSpeed || 'Tempo'}</div>
+                         </div>
                        </div>
                     </div>
                  </div>
-               )}
-            </div>
+              </div>
+
+              {/* Seção Inferior: Detalhes e Análises (Metade inferior independente) */}
+              <div className="flex-grow overflow-y-auto custom-scrollbar p-4 md:p-8 space-y-8 pb-32">
+                 {/* House Context */}
+                 <div className="bg-indigo-900/10 p-6 md:p-8 rounded-[2rem] border border-indigo-500/20 shadow-md">
+                    <span className="text-[9px] font-black text-indigo-300 uppercase block mb-1 tracking-[0.2em]">CASA {selectedHouse + 1}: {currentHouse?.name}</span>
+                    <p className="text-xs md:text-sm text-slate-300 leading-relaxed font-medium mb-4">{currentHouse?.technicalDescription}</p>
+                    {spreadType === 'relogio' && currentHouse && (
+                      <div className="pt-4 border-t border-indigo-500/20">
+                        <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest block mb-2">Pergunta-Chave:</span>
+                        <p className="text-xs text-indigo-200 italic">"O que o ciclo de {currentHouse.month} ({currentHouse.zodiac}) pede para ${readingTheme.toLowerCase()}?"</p>
+                      </div>
+                    )}
+                 </div>
+
+                 {/* Opposition Context (Relógio Only) */}
+                 {spreadType === 'relogio' && oppIndex !== null && (
+                   <div className="space-y-4">
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">Eixo de Oposição (180°)</span>
+                      <RelatedCardMini 
+                        card={oppCard || null} 
+                        houseName={oppHouse?.name || "Oposta"} 
+                        houseId={oppIndex + 1} 
+                        label="Conflito & Complemento"
+                        labelColor="bg-rose-500/20 text-rose-400 border-rose-500/20"
+                      />
+                      <div className="p-4 bg-slate-950/40 rounded-2xl border border-slate-800 text-[10px] text-slate-400 leading-relaxed italic">
+                         Eixo: {Geometry.getEixoConceitualRelogio(selectedHouse) || "Eixo de Transição"}
+                      </div>
+                   </div>
+                 )}
+
+                 {/* Geometries Section (Mesa Real Only) */}
+                 {spreadType === 'mesa-real' && (
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-2 px-2">
+                        <Layers size={14} className="text-indigo-400" />
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Geometria do Campo</span>
+                      </div>
+                      <div className="space-y-4">
+                        {diagUp.map((item, i) => <RelatedCardMini key={`up-${i}`} card={item.card} houseName={item.house.name} houseId={item.idx + 1} label="Campo de Ascensão" labelColor="bg-orange-500/20 text-orange-400 border-orange-500/20" />)}
+                        {diagDown.map((item, i) => <RelatedCardMini key={`dn-${i}`} card={item.card} houseName={item.house.name} houseId={item.idx + 1} label="Campo de Sustentação" labelColor="bg-indigo-500/20 text-indigo-400 border-indigo-500/20" />)}
+                        {mirrorCards.map((item, i) => <RelatedCardMini key={`mi-${i}`} card={item.card} houseName={item.house.name} houseId={item.idx + 1} label="Espelhamento" />)}
+                        {knightCards.map((item, i) => <RelatedCardMini key={`kn-${i}`} card={item.card} houseName={item.house.name} houseId={item.idx + 1} label="Salto do Cavalo" />)}
+                      </div>
+                    </div>
+                 )}
+
+                 {/* AI Analysis */}
+                 <div className="pt-6 border-t border-slate-800">
+                    {!cardAnalysis ? (
+                      <button onClick={runMentorAnalysis} disabled={isAiLoading || !selectedCard} className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-5 rounded-3xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-3 group shadow-xl shadow-indigo-600/20 transition-all active:scale-[0.98]">
+                        {isAiLoading ? <Loader2 size={18} className="animate-spin" /> : <Wand2 size={18} />}
+                        <span>{spreadType === 'relogio' ? 'Análise Técnica do Ciclo' : 'Análise Técnica Completa'}</span>
+                      </button>
+                    ) : (
+                      <div className="space-y-4 animate-in fade-in zoom-in-95 duration-700">
+                        <div className="flex justify-between items-center px-4">
+                          <h4 className="text-[11px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2"><MessageSquare size={14}/> Síntese do Mentor</h4>
+                          <button onClick={() => setCardAnalysis(null)} className="text-[10px] text-slate-500 underline uppercase tracking-tighter">Limpar</button>
+                        </div>
+                        <div className="bg-slate-950/80 rounded-[2.5rem] p-6 md:p-8 border border-slate-800 shadow-inner">
+                          <div className="prose prose-invert prose-xs md:prose-sm card-interpretation whitespace-pre-wrap leading-relaxed">{cardAnalysis}</div>
+                        </div>
+                      </div>
+                    )}
+                 </div>
+
+                 {/* Relógio Stats Footer */}
+                 {spreadType === 'relogio' && (
+                   <div className="pt-8 mt-8 border-t border-slate-800/40">
+                      <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-4 block">Vibração Dominante do Ciclo</span>
+                      <div className="grid grid-cols-3 gap-2">
+                         <div className="flex flex-col items-center bg-emerald-500/10 p-3 rounded-2xl border border-emerald-500/20">
+                            <span className="text-xl font-black text-emerald-400">{polarityStats.positive}</span>
+                            <span className="text-[7px] font-bold text-emerald-500/60 uppercase">Positivas</span>
+                         </div>
+                         <div className="flex flex-col items-center bg-slate-800/10 p-3 rounded-2xl border border-slate-800/20">
+                            <span className="text-xl font-black text-slate-400">{polarityStats.neutral}</span>
+                            <span className="text-[7px] font-bold text-slate-500/60 uppercase">Neutras</span>
+                         </div>
+                         <div className="flex flex-col items-center bg-rose-500/10 p-3 rounded-2xl border border-rose-500/20">
+                            <span className="text-xl font-black text-rose-400">{polarityStats.negative}</span>
+                            <span className="text-[7px] font-bold text-rose-500/60 uppercase">Negativas</span>
+                         </div>
+                      </div>
+                   </div>
+                 )}
+              </div>
+            </>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-center p-12 opacity-20">
-              <Compass size={64} className="mb-6 animate-pulse" />
-              <p className="text-xs font-black uppercase tracking-widest leading-loose">
-                {spreadType === 'relogio' ? 'Selecione um mês para ler o ciclo técnico.' : 'Selecione uma casa na mesa para iniciar a exploração técnica.'}
-              </p>
-            </div>
+             <div className="h-full flex flex-col items-center justify-center text-center p-12 transition-opacity duration-300 opacity-20">
+                <Compass size={64} className="mb-6 animate-pulse" />
+                <p className="text-xs font-black uppercase tracking-widest leading-loose">
+                  {spreadType === 'relogio' ? 'Selecione um mês para ler o ciclo técnico.' : 'Selecione uma casa na mesa para iniciar a exploração técnica.'}
+                </p>
+             </div>
           )}
         </div>
         
         {/* Ícone de Estado Minimizado para Desktop */}
         {!mentorPanelOpen && (
-          <div className="hidden md:flex absolute inset-0 flex-col items-center pt-24 gap-12 pointer-events-none opacity-40">
-            <ActivityIcon size={24} className="text-indigo-400" />
-            <span className="font-cinzel text-[10px] font-bold uppercase tracking-[0.5em] vertical-text">MENTOR</span>
+          <div className="hidden md:flex absolute inset-0 flex-col items-center pt-24 gap-6 pointer-events-none opacity-60">
+            <ActivityIcon size={32} className="text-emerald-500" />
+            <span className="font-cinzel text-[14px] font-bold uppercase tracking-[0.6em] vertical-text text-slate-100">MENTOR</span>
           </div>
         )}
       </aside>
@@ -660,6 +737,7 @@ const App: React.FC = () => {
         .vertical-text {
           writing-mode: vertical-rl;
           text-orientation: mixed;
+          transform: rotate(0deg);
         }
         @media (max-width: 768px) {
            .card-interpretation h1, .card-interpretation h2, .card-interpretation h3 { font-size: 0.8rem; }
