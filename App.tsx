@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   LayoutGrid, RotateCcw, Sparkles, ChevronRight, ChevronLeft, BookOpen, 
@@ -7,27 +6,24 @@ import {
   ShieldCheck, Info, Wand2, HelpCircle, Anchor, X, AlertTriangle, 
   Brain, GitBranch, Layers, SearchCode, Loader2, Settings, ListFilter,
   ArrowRightLeft, MoveDiagonal, Heart, Briefcase, Stars, ChevronUp, ChevronDown,
-  Eye, Maximize2, Minimize2, Menu, Save, Download, CreditCard, Activity as ActivityIcon
+  Eye, Maximize2, Minimize2, Menu, Save, Download, CreditCard, Activity as ActivityIcon,
+  Book
 } from 'lucide-react';
 import { LENORMAND_CARDS, LENORMAND_HOUSES, FUNDAMENTALS_DATA } from './constants';
 import { Polarity, Timing, LenormandCard, LenormandHouse, SpreadType, StudyLevel, ReadingTheme } from './types';
 import { getDetailedCardAnalysis } from './geminiService';
 import * as Geometry from './geometryService';
+import { CARD_IMAGES, FALLBACK_IMAGE } from './cardImages';
 
 // ===============================
-// Caminho padrão da imagem da carta
+// Caminho das imagens das cartas
 // ===============================
 export const getCardImageUrl = (id: number): string => {
-  const base = import.meta.env.BASE_URL || '/';
-  return `${base}assets/${id.toString().padStart(2, '0')}.jpg`;
+  return CARD_IMAGES[id] ?? FALLBACK_IMAGE;
 };
 
 // ===============================
 // Handler robusto de fallback
-// Ordem:
-// 1) Imagem da carta
-// 2) fallback.jpg (local)
-// 3) placeholder externo
 // ===============================
 export const handleImageError = (
   e: React.SyntheticEvent<HTMLImageElement, Event>
@@ -35,21 +31,13 @@ export const handleImageError = (
   const img = e.currentTarget;
   if (!img) return;
 
-  const base = import.meta.env.BASE_URL || '/';
-  const fallbackLocal = `${base}assets/fallback.jpg`;
-
-  /**
-   * Usamos data-fallback para evitar loops:
-   * - undefined → imagem original falhou
-   * - "true"    → fallback já aplicado
-   */
-  if (img.dataset.fallback === 'true') {
+  if (img.dataset.fallbackApplied === 'true') {
     img.onerror = null;
     return;
   }
 
-  img.dataset.fallback = 'true';
-  img.src = fallbackLocal;
+  img.dataset.fallbackApplied = 'true';
+  img.src = FALLBACK_IMAGE;
 };
 
 const generateShuffledArray = (size: number = 36) => {
@@ -116,10 +104,10 @@ const RelatedCardMini: React.FC<{ card: LenormandCard | null; houseName: string;
               src={getCardImageUrl(card.id)} 
               alt={card.name} 
               onError={handleImageError}
-              className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-90 transition-opacity"
+              className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
             />
             <div className="absolute top-1 right-1 w-2 h-2 rounded-full border border-black/20 z-10" style={{ backgroundColor: getPolarityColor(card.polarity).replace('bg-', '') }}></div>
-            <span className="text-[10px] font-black text-indigo-100 z-10 drop-shadow-md">{card.id}</span>
+            <span className="text-[10px] font-black text-white drop-shadow-lg z-10">{card.id}</span>
             <span className="text-[6px] font-cinzel font-bold text-white uppercase text-center leading-none px-1 mt-auto mb-1 z-10 bg-black/60 w-full py-1 backdrop-blur-sm">{card.name}</span>
           </>
         ) : (
@@ -187,7 +175,17 @@ const CardVisual: React.FC<{
       className={`relative group aspect-[3/4.2] rounded-xl border-2 cursor-pointer transition-all duration-500 card-perspective overflow-hidden shadow-xl ${isSelected ? 'border-indigo-400 ring-4 ring-indigo-400/30 scale-105 z-20' : isThemeCard ? 'border-transparent scale-105 z-20' : highlightType ? `${highlightStyles[highlightType]} animate-pulse` : 'border-slate-800/60 hover:border-slate-600 bg-slate-900/60'}`}
       style={isThemeCard ? { boxShadow: `0 0 30px ${themeColor}, inset 0 0 15px ${themeColor}` } : {}}
     >
-      
+      <div className="absolute inset-0 pointer-events-none">
+        {card && (
+          <img 
+            src={getCardImageUrl(card.id)} 
+            alt={card.name} 
+            onError={handleImageError}
+            className={`w-full h-full object-cover transition-all duration-700 ${isThemeCard ? 'opacity-[0.8]' : 'opacity-[0.5] group-hover:opacity-[0.9]'}`} 
+          />
+        )}
+      </div>
+
       {isThemeCard && (
         <>
           <div className="absolute inset-0 z-0 animate-cloud-pulse pointer-events-none opacity-40 blur-xl" style={{ backgroundColor: themeColor }}></div>
@@ -195,31 +193,21 @@ const CardVisual: React.FC<{
         </>
       )}
 
-      <div className="absolute inset-0 pointer-events-none">
-        {card && (
-          <img 
-            src={getCardImageUrl(card.id)} 
-            alt={card.name} 
-            onError={handleImageError}
-            className={`w-full h-full object-cover transition-all duration-700 ${isThemeCard ? 'opacity-[0.55]' : 'opacity-[0.25] group-hover:opacity-[0.45]'}`} 
-          />
-        )}
-      </div>
       <div className="absolute top-1 right-1 flex items-center gap-1 z-20 scale-75 md:scale-100">
-         <span className="text-[8px] md:text-[10px]">{getTimingIndicator(card?.timingSpeed)}</span>
-         <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${getPolarityColor(card?.polarity)}`} />
+         <span className="text-[8px] md:text-[10px] drop-shadow-md">{getTimingIndicator(card?.timingSpeed)}</span>
+         <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full border border-black/20 ${getPolarityColor(card?.polarity)}`} />
       </div>
       <div className="absolute top-1 left-1 z-10">
-        <span className="text-[7px] md:text-[9px] font-black text-slate-500 uppercase">CASA {houseId}</span>
+        <span className="text-[7px] md:text-[9px] font-black text-slate-100 uppercase bg-black/40 px-1 rounded-sm backdrop-blur-sm">CASA {houseId}</span>
       </div>
       {card ? (
         <div className={`absolute inset-0 flex flex-col p-2 md:p-3 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent`}>
           <div className="flex-grow flex flex-col items-center justify-center text-center mt-2">
-            <span className={`text-[8px] md:text-[11px] font-cinzel font-bold text-white uppercase leading-tight tracking-wider drop-shadow-md ${isThemeCard ? 'scale-110' : ''}`}>{card.name}</span>
+            <span className={`text-[8px] md:text-[11px] font-cinzel font-bold text-white uppercase leading-tight tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] ${isThemeCard ? 'scale-110' : ''}`}>{card.name}</span>
           </div>
-          <div className="mt-auto border-t border-white/10 pt-1 flex justify-between">
-            <span className="text-[8px] md:text-[10px] font-bold text-indigo-400">{card.id}</span>
-            <span className={`text-[6px] md:text-[8px] font-black uppercase ${card.polarity === Polarity.POSITIVE ? 'text-emerald-400' : card.polarity === Polarity.NEGATIVE ? 'text-rose-400' : 'text-slate-400'}`}>{card.polarity}</span>
+          <div className="mt-auto border-t border-white/20 pt-1 flex justify-between items-center backdrop-blur-sm bg-black/30 -mx-3 -mb-3 px-3 py-1">
+            <span className="text-[8px] md:text-[10px] font-black text-white drop-shadow-md">{card.id}</span>
+            <span className={`text-[6px] md:text-[8px] font-black uppercase ${card.polarity === Polarity.POSITIVE ? 'text-emerald-400' : card.polarity === Polarity.NEGATIVE ? 'text-rose-400' : 'text-slate-300'}`}>{card.polarity}</span>
           </div>
         </div>
       ) : (
@@ -233,7 +221,7 @@ const App: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [mentorPanelOpen, setMentorPanelOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
-  const [view, setView] = useState<'board' | 'fundamentals'>('board');
+  const [view, setView] = useState<'board' | 'fundamentals' | 'glossary'>('board');
   
   const [difficultyLevel, setDifficultyLevel] = useState<StudyLevel>(() => {
     const saved = localStorage.getItem('lumina_difficulty_level');
@@ -366,6 +354,7 @@ const App: React.FC = () => {
         <nav className="flex-grow px-2 space-y-2 overflow-y-auto custom-scrollbar">
           <NavItem icon={<LayoutGrid size={18}/>} label="Mesa Real" active={view === 'board' && spreadType === 'mesa-real'} collapsed={sidebarCollapsed} onClick={() => {setView('board'); setSpreadType('mesa-real');}} />
           <NavItem icon={<Clock size={18}/>} label="Relógio" active={view === 'board' && spreadType === 'relogio'} collapsed={sidebarCollapsed} onClick={() => {setView('board'); setSpreadType('relogio');}} />
+          <NavItem icon={<Book size={18}/>} label="Glossário" active={view === 'glossary'} collapsed={sidebarCollapsed} onClick={() => setView('glossary')} />
           <NavItem icon={<BookOpen size={18}/>} label="Fundamentos" active={view === 'fundamentals'} collapsed={sidebarCollapsed} onClick={() => setView('fundamentals')} />
           
           <div className={`pt-4 mt-4 border-t border-slate-800 flex flex-col gap-2 ${sidebarCollapsed ? 'items-center mt-8' : 'px-2'}`}>
@@ -422,25 +411,31 @@ const App: React.FC = () => {
       <main className="flex-grow flex flex-col h-screen overflow-y-auto custom-scrollbar relative">
         <header className="h-14 md:h-16 border-b border-slate-800/40 flex items-center justify-between px-4 md:px-10 z-20 glass-panel sticky top-0">
            <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
-              <h2 className="font-cinzel text-xs md:text-sm font-black text-white tracking-widest uppercase truncate">{spreadType === 'relogio' ? 'Relógio' : 'Mesa Real'}</h2>
-              <div className="flex items-center gap-2">
-                 <select 
-                    value={readingTheme} 
-                    onChange={(e) => setReadingTheme(e.target.value as ReadingTheme)}
-                    className="bg-slate-800/50 text-[9px] font-black uppercase text-indigo-300 border border-indigo-500/20 rounded-md px-2 py-1 outline-none focus:border-indigo-500 transition-colors cursor-pointer"
-                 >
-                    {Object.keys(themeIcons).map(t => <option key={t} value={t}>{t}</option>)}
-                 </select>
-                 {activeThemeIndex !== null && (
-                    <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-md animate-in fade-in slide-in-from-left-2">
-                       <Sparkles size={10} className="text-amber-500" />
-                       <span className="text-[8px] font-black text-amber-500 uppercase tracking-tighter">Foco Temático Ativo</span>
-                    </div>
-                 )}
-              </div>
+              <h2 className="font-cinzel text-xs md:text-sm font-black text-white tracking-widest uppercase truncate">
+                {view === 'glossary' ? 'Glossário de Cartas' : spreadType === 'relogio' ? 'Relógio' : 'Mesa Real'}
+              </h2>
+              {view === 'board' && (
+                <div className="flex items-center gap-2">
+                   <select 
+                      value={readingTheme} 
+                      onChange={(e) => setReadingTheme(e.target.value as ReadingTheme)}
+                      className="bg-slate-800/50 text-[9px] font-black uppercase text-indigo-300 border border-indigo-500/20 rounded-md px-2 py-1 outline-none focus:border-indigo-500 transition-colors cursor-pointer"
+                   >
+                      {Object.keys(themeIcons).map(t => <option key={t} value={t}>{t}</option>)}
+                   </select>
+                   {activeThemeIndex !== null && (
+                      <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-md animate-in fade-in slide-in-from-left-2">
+                         <Sparkles size={10} className="text-amber-500" />
+                         <span className="text-[8px] font-black text-amber-500 uppercase tracking-tighter">Foco Temático Ativo</span>
+                      </div>
+                   )}
+                </div>
+              )}
            </div>
            <div className="flex items-center gap-2 md:gap-4">
-              <button onClick={() => setBoard(generateShuffledArray(spreadType === 'relogio' ? 13 : 36))} className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 md:px-4 md:py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all active:scale-95 shadow-xl"><RotateCcw size={14} /><span className="hidden md:inline">EMBARALHAR</span></button>
+              {view === 'board' && (
+                <button onClick={() => setBoard(generateShuffledArray(spreadType === 'relogio' ? 13 : 36))} className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 md:px-4 md:py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all active:scale-95 shadow-xl"><RotateCcw size={14} /><span className="hidden md:inline">EMBARALHAR</span></button>
+              )}
               <button onClick={() => setMentorPanelOpen(!mentorPanelOpen)} className="md:hidden bg-emerald-600 text-white p-2 rounded-xl mobile-mentor-trigger"><Activity size={18}/></button>
            </div>
         </header>
@@ -525,6 +520,31 @@ const App: React.FC = () => {
              </div>
            )}
 
+           {view === 'glossary' && (
+             <div className="max-w-7xl mx-auto pb-32 animate-in fade-in duration-500">
+               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                 {LENORMAND_CARDS.map(card => (
+                   <div key={card.id} className="bg-slate-900/60 p-4 rounded-3xl border border-slate-800 flex flex-col items-center text-center group hover:border-indigo-500/40 transition-all shadow-xl">
+                      <div className="w-full aspect-[3/4.2] mb-4 rounded-2xl border border-slate-700/50 overflow-hidden relative shadow-inner">
+                        <img 
+                          src={getCardImageUrl(card.id)} 
+                          alt={card.name} 
+                          onError={handleImageError}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                        />
+                        <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+                          <span className="text-[8px] bg-black/60 px-1.5 py-0.5 rounded-full backdrop-blur-md">{card.polarity}</span>
+                          <span className="text-[10px] bg-black/60 w-6 h-6 flex items-center justify-center rounded-full backdrop-blur-md border border-white/10">{card.id}</span>
+                        </div>
+                      </div>
+                      <h3 className="text-[11px] font-cinzel font-bold text-white uppercase mb-2 tracking-widest">{card.name}</h3>
+                      <p className="text-[9px] text-slate-400 line-clamp-3 leading-relaxed px-2 italic">{card.briefInterpretation}</p>
+                   </div>
+                 ))}
+               </div>
+             </div>
+           )}
+
            {view === 'fundamentals' && (
              <div className="max-w-4xl mx-auto space-y-8 pb-32">
                {FUNDAMENTALS_DATA.map(m => (
@@ -545,7 +565,7 @@ const App: React.FC = () => {
         </div>
 
         {/* Floating Action Button (Mobile) */}
-        {selectedHouse !== null && !mentorPanelOpen && (
+        {selectedHouse !== null && !mentorPanelOpen && view === 'board' && (
            <button onClick={() => setMentorPanelOpen(true)} className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-indigo-600 text-white px-8 py-4 rounded-full font-black text-[11px] uppercase tracking-widest flex items-center gap-3 animate-bounce shadow-2xl">
               <Eye size={18}/> Analisar Casa {selectedHouse + 1}
            </button>
@@ -569,18 +589,18 @@ const App: React.FC = () => {
               <h2 className="text-xs font-bold font-cinzel uppercase tracking-[0.2em] text-slate-100 whitespace-nowrap">Mentor LUMINA</h2>
            </div>
 
-           <div className="w-10"></div> {/* Espaçador para compensar a remoção do botão X e manter centralizado */}
+           <div className="w-10"></div>
         </div>
 
         <div className={`flex-grow flex flex-col overflow-hidden relative transition-opacity duration-300 ${!mentorPanelOpen ? 'opacity-0' : 'opacity-100'}`}>
           {selectedHouse !== null ? (
             <>
-              {/* Seção Superior: Visualização da Carta (Metade superior) */}
-              <div className="h-[45%] md:h-[50%] shrink-0 bg-slate-900/95 border-b border-slate-800/80 shadow-lg overflow-y-auto custom-scrollbar flex flex-col items-center justify-center">
+              {/* Seção Superior: Visualização da Carta (Metade superior) - Barra de rolagem reduzida para foco no conteúdo */}
+              <div className="h-[50%] md:h-[55%] shrink-0 bg-slate-900/95 border-b border-slate-800/80 shadow-lg overflow-y-auto custom-scrollbar flex flex-col items-center">
                  <div className="p-4 md:p-6 w-full max-w-sm">
-                    <div className="bg-slate-950/60 p-4 md:p-6 rounded-[2rem] border border-slate-800/80 relative overflow-hidden shadow-2xl flex flex-col items-center text-center">
+                    <div className="bg-slate-950/60 p-4 md:p-5 rounded-[2rem] border border-slate-800/80 relative overflow-hidden shadow-2xl flex flex-col items-center text-center">
                        {selectedCard && (
-                         <div className="mb-4 aspect-[3/4.2] w-full max-w-[70px] md:max-w-[90px] mx-auto rounded-xl border-2 border-indigo-500/30 overflow-hidden shadow-[0_0_20px_rgba(79,70,229,0.2)] bg-slate-900 shrink-0">
+                         <div className="mb-2 aspect-[3/4.2] w-full max-w-[55px] md:max-w-[80px] mx-auto rounded-xl border-2 border-indigo-500/30 overflow-hidden shadow-[0_0_20px_rgba(79,70,229,0.2)] bg-slate-900 shrink-0">
                            <img 
                              src={getCardImageUrl(selectedCard.id)} 
                              alt={selectedCard.name} 
@@ -593,18 +613,40 @@ const App: React.FC = () => {
                        <div className="relative z-10 w-full">
                          <div className="flex justify-between items-start mb-1 px-2">
                             <span className="text-[7px] md:text-[8px] font-black text-indigo-400 uppercase tracking-widest block">CARTA {selectedCard?.id}</span>
-                            <button 
-                               onClick={() => setManualThemeIndex(selectedHouse === activeThemeIndex ? null : selectedHouse)}
-                               className={`p-1 rounded-lg transition-all ${activeThemeIndex === selectedHouse ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'bg-slate-800 text-slate-500 hover:text-amber-400'}`}
-                               title="Definir Manualmente como Foco"
-                            >
-                               <Target size={12}/>
-                            </button>
+                            <div className="flex flex-col items-end gap-1">
+                                <button 
+                                   onClick={() => setManualThemeIndex(selectedHouse === activeThemeIndex ? null : selectedHouse)}
+                                   className={`p-1 rounded-lg transition-all ${activeThemeIndex === selectedHouse ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'bg-slate-800 text-slate-500 hover:text-amber-400'}`}
+                                   title="Definir Manualmente como Foco"
+                                >
+                                   <Target size={12}/>
+                                </button>
+                                <span className="text-[6px] font-bold text-slate-500 uppercase tracking-tighter">Fixar Foco</span>
+                            </div>
                          </div>
-                         <h3 className="text-base md:text-lg font-cinzel font-bold text-white mb-2 tracking-wider drop-shadow-lg">{selectedCard?.name || 'Vazio'}</h3>
-                         <div className="bg-indigo-600/10 p-2 md:p-3 rounded-2xl border border-indigo-500/20 mb-3 shadow-inner">
-                            <p className="text-[8px] md:text-[10px] text-slate-300 leading-relaxed font-medium italic">{selectedCard?.briefInterpretation || 'Posição livre para leitura.'}</p>
+                         <h3 className="text-sm md:text-base font-cinzel font-bold text-white mb-2 tracking-wider drop-shadow-lg">{selectedCard?.name || 'Vazio'}</h3>
+                         
+                         {/* Brief Interpretation */}
+                         <div className="bg-indigo-600/10 p-2 md:p-2.5 rounded-2xl border border-indigo-500/20 mb-3 shadow-inner">
+                            <p className="text-[8px] md:text-[9.5px] text-slate-300 leading-relaxed font-medium italic">{selectedCard?.briefInterpretation || 'Posição livre para leitura.'}</p>
                          </div>
+
+                         {/* Keywords and Description (As requested in image) */}
+                         <div className="flex flex-wrap justify-center gap-1 mb-3">
+                            {selectedCard?.keywords?.map((word, i) => (
+                               <span key={i} className="px-1.5 py-0.5 rounded-md bg-slate-800/80 border border-slate-700/50 text-[6px] md:text-[8px] font-bold text-indigo-300 uppercase tracking-tighter">
+                                  {word}
+                               </span>
+                            ))}
+                         </div>
+                         
+                         <div className="bg-slate-900/50 p-2 rounded-xl border border-slate-800/60 mb-3 text-left">
+                            <span className="text-[6px] font-black text-slate-500 uppercase block mb-0.5">Descrição Técnica</span>
+                            <p className="text-[7px] md:text-[8.5px] text-slate-400 leading-tight">
+                               {selectedCard?.description}
+                            </p>
+                         </div>
+
                          <div className="grid grid-cols-2 gap-2">
                             <div className="p-1.5 bg-slate-900/80 rounded-xl border border-slate-800 text-[7px] md:text-[8px] font-bold text-slate-400 uppercase tracking-widest">{selectedCard?.polarity || 'Polaridade'}</div>
                             <div className={`p-1.5 rounded-xl border text-[7px] md:text-[8px] font-bold uppercase tracking-widest ${selectedCard?.timingCategory === 'Acelera' ? 'border-emerald-500/30 text-emerald-400' : 'border-slate-800 text-slate-500'}`}>{selectedCard?.timingSpeed || 'Tempo'}</div>
@@ -617,13 +659,16 @@ const App: React.FC = () => {
               {/* Seção Inferior: Detalhes e Análises (Metade inferior independente) */}
               <div className="flex-grow overflow-y-auto custom-scrollbar p-4 md:p-8 space-y-8 pb-32">
                  {/* House Context */}
-                 <div className="bg-indigo-900/10 p-6 md:p-8 rounded-[2rem] border border-indigo-500/20 shadow-md">
+                 <div className="bg-indigo-900/10 p-6 md:p-8 rounded-[2rem] border border-indigo-500/20 shadow-md relative group/house">
+                    <div className="absolute top-4 right-4 text-indigo-400 opacity-20 group-hover/house:opacity-100 transition-opacity" title="A Moldura é permanente. O Movimento de Cavalo é transitório.">
+                       <HelpCircle size={14} />
+                    </div>
                     <span className="text-[9px] font-black text-indigo-300 uppercase block mb-1 tracking-[0.2em]">CASA {selectedHouse + 1}: {currentHouse?.name}</span>
                     <p className="text-xs md:text-sm text-slate-300 leading-relaxed font-medium mb-4">{currentHouse?.technicalDescription}</p>
                     {spreadType === 'relogio' && currentHouse && (
                       <div className="pt-4 border-t border-indigo-500/20">
                         <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest block mb-2">Pergunta-Chave:</span>
-                        <p className="text-xs text-indigo-200 italic">"O que o ciclo de {currentHouse.month} ({currentHouse.zodiac}) pede para ${readingTheme.toLowerCase()}?"</p>
+                        <p className="text-xs text-indigo-200 italic">"O que o ciclo de {currentHouse.month} ({currentHouse.zodiac}) pede para {readingTheme.toLowerCase()}?"</p>
                       </div>
                     )}
                  </div>
@@ -679,6 +724,19 @@ const App: React.FC = () => {
                         </div>
                       </div>
                     )}
+                 </div>
+
+                 {/* Nota Pedagógica Fixa */}
+                 <div className="bg-slate-950/60 p-5 rounded-[2rem] border border-indigo-500/20 mt-12 flex gap-4 items-center group/pedagogical">
+                    <div className="w-10 h-10 rounded-full bg-indigo-600/10 flex items-center justify-center shrink-0 border border-indigo-500/10 group-hover/pedagogical:scale-110 transition-transform">
+                       <Brain className="text-indigo-400" size={18} />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                       <span className="text-[8px] font-black text-indigo-400 uppercase tracking-[0.2em]">Sapiência Pedagógica</span>
+                       <p className="text-[10px] text-slate-400 italic leading-relaxed">
+                          "A Moldura é permanente. O Movimento de Cavalo é transitório. A leitura correta surge da integração entre ambos."
+                       </p>
+                    </div>
                  </div>
 
                  {/* Relógio Stats Footer */}
