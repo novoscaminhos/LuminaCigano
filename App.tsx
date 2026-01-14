@@ -6,14 +6,18 @@ import {
   MessageSquare, User, Sun, Moon, History, AlertCircle, LogOut, Mail, 
   ShieldCheck, Info, Wand2, HelpCircle, Anchor, X, AlertTriangle, 
   Brain, GitBranch, Layers, SearchCode, Loader2, Settings, ListFilter,
-  ArrowRightLeft, MoveDiagonal, Heart, Briefcase, Stars, ChevronUp, ChevronDown
+  ArrowRightLeft, MoveDiagonal, Heart, Briefcase, Stars, ChevronUp, ChevronDown,
+  Eye
 } from 'lucide-react';
 import { LENORMAND_CARDS, LENORMAND_HOUSES, FUNDAMENTALS_DATA } from './constants';
-import { Polarity, Timing, LenormandCard, SpreadType, StudyLevel, ReadingTheme } from './types';
+import { Polarity, Timing, LenormandCard, LenormandHouse, SpreadType, StudyLevel, ReadingTheme } from './types';
 import { getDetailedCardAnalysis } from './geminiService';
 import * as Geometry from './geometryService';
 
 const VALID_LICENSE_KEY = 'LUMINA-RENEW-2026-LUNARA';
+
+// Função para gerar URLs de imagem (DiceBear para fins didáticos/prototipagem rápida)
+const getCardImageUrl = (id: number) => `https://api.dicebear.com/7.x/shapes/svg?seed=lenormand-art-${id}&backgroundColor=0f172a&shape1Color=4f46e5&shape2Color=818cf8&shape3Color=312e81`;
 
 const generateShuffledArray = (size: number = 36) => {
   const ids = Array.from({length: 36}, (_, i) => i + 1);
@@ -43,16 +47,21 @@ const RelatedCardMini: React.FC<{ card: LenormandCard | null; houseName: string;
   return (
     <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-800/60 flex gap-3 items-start group hover:border-indigo-500/30 transition-all relative">
       {label && (
-        <div className={`absolute -top-2 left-3 px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest shadow-sm ${labelColor || 'bg-slate-800 text-slate-400'}`}>
+        <div className={`absolute -top-2 left-3 px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest shadow-sm z-10 ${labelColor || 'bg-slate-800 text-slate-400'}`}>
           {label}
         </div>
       )}
-      <div className={`w-12 aspect-[3/4.2] rounded-lg border border-slate-700/50 flex flex-col items-center justify-center relative overflow-hidden bg-slate-900 shadow-inner flex-shrink-0 ${!card ? 'opacity-20' : ''}`}>
+      <div className={`w-14 aspect-[3/4.2] rounded-lg border border-slate-700/50 flex flex-col items-center justify-center relative overflow-hidden bg-slate-900 shadow-inner flex-shrink-0 ${!card ? 'opacity-20' : ''}`}>
         {card ? (
           <>
-            <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full border border-black/20" style={{ backgroundColor: getPolarityColor(card.polarity).replace('bg-', '') }}></div>
-            <span className="text-[10px] font-black text-indigo-400/50">{card.id}</span>
-            <span className="text-[6px] font-cinzel font-bold text-white uppercase text-center leading-none px-1 mt-1">{card.name}</span>
+            <img 
+              src={getCardImageUrl(card.id)} 
+              alt={card.name} 
+              className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-70 transition-opacity"
+            />
+            <div className="absolute top-1 right-1 w-2 h-2 rounded-full border border-black/20 z-10" style={{ backgroundColor: getPolarityColor(card.polarity).replace('bg-', '') }}></div>
+            <span className="text-[10px] font-black text-indigo-100 z-10 drop-shadow-md">{card.id}</span>
+            <span className="text-[6px] font-cinzel font-bold text-white uppercase text-center leading-none px-1 mt-auto mb-1 z-10 bg-black/60 w-full py-1 backdrop-blur-sm">{card.name}</span>
           </>
         ) : (
           <X size={12} className="text-slate-800" />
@@ -77,9 +86,10 @@ const CardVisual: React.FC<{
   houseId: number; 
   onClick: () => void;
   isSelected: boolean;
-  highlightType?: 'mirror' | 'knight' | 'frame' | 'axis' | 'diag-up' | 'diag-down' | null;
+  highlightType?: 'mirror' | 'knight' | 'frame' | 'axis' | 'diag-up' | 'diag-down' | 'center' | null;
   level: StudyLevel;
-}> = ({ card, houseId, onClick, isSelected, highlightType, level }) => {
+  size?: 'normal' | 'small' | 'large';
+}> = ({ card, houseId, onClick, isSelected, highlightType, level, size = 'normal' }) => {
   
   const getTimingIndicator = (timing: Timing) => {
     if (timing === Timing.SLOW || timing === Timing.VERY_LONG) return '🔴';
@@ -101,15 +111,27 @@ const CardVisual: React.FC<{
     frame: 'border-amber-500/80 shadow-[0_0_10px_rgba(245,158,11,0.2)]',
     axis: 'ring-4 ring-indigo-500/60 border-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.4)] scale-105 z-10',
     'diag-up': 'ring-4 ring-orange-500/60 border-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.4)] scale-105 z-10',
-    'diag-down': 'ring-4 ring-indigo-500/60 border-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.4)] scale-105 z-10'
+    'diag-down': 'ring-4 ring-indigo-500/60 border-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.4)] scale-105 z-10',
+    'center': 'ring-4 ring-amber-400 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.6)] scale-110 z-30'
   };
 
   const isTensioning = card?.polarity === Polarity.NEGATIVE;
   const isBlocking = card?.timingCategory === 'Bloqueia' || card?.timingCategory === 'Retarda';
 
   return (
-    <div onClick={onClick} className={`relative group aspect-[3/4.2] rounded-xl border-2 cursor-pointer transition-all duration-500 card-perspective overflow-hidden shadow-xl ${isSelected ? 'border-indigo-400 ring-4 ring-indigo-400/30 scale-105 z-20' : highlightType ? `${highlightStyles[highlightType]} animate-pulse` : 'border-slate-800/60 hover:border-slate-600 bg-slate-900/60'}`}>
+    <div onClick={onClick} className={`relative group aspect-[3/4.2] rounded-xl border-2 cursor-pointer transition-all duration-500 card-perspective overflow-hidden shadow-xl ${isSelected ? 'border-indigo-400 ring-4 ring-indigo-400/30 scale-105 z-20' : highlightType ? `${highlightStyles[highlightType as keyof typeof highlightStyles]} animate-pulse` : 'border-slate-800/60 hover:border-slate-600 bg-slate-900/60'}`}>
       
+      {/* Miniatura da Imagem com Opacidade Reduzida */}
+      <div className="absolute inset-0 pointer-events-none">
+        {card && (
+          <img 
+            src={getCardImageUrl(card.id)} 
+            alt={card.name} 
+            className="w-full h-full object-cover opacity-[0.15] group-hover:opacity-[0.25] transition-opacity duration-700"
+          />
+        )}
+      </div>
+
       <div className="absolute bottom-2 left-2 z-20 flex gap-1 pointer-events-none opacity-90 transition-all">
         {isTensioning && <div className="bg-rose-600 p-1 rounded-md shadow-2xl border border-black/30"><AlertTriangle size={10} className="text-white" /></div>}
         {isBlocking && <div className="bg-slate-800 p-1 rounded-md shadow-2xl border border-black/30"><Anchor size={10} className="text-white" /></div>}
@@ -125,13 +147,14 @@ const CardVisual: React.FC<{
       </div>
 
       {card ? (
-        <div className={`absolute inset-0 flex flex-col p-3 transition-all duration-500 ${highlightType && isTensioning ? 'bg-rose-950/40' : highlightType && isBlocking ? 'bg-slate-950/60' : 'bg-gradient-to-t from-slate-950 via-slate-900/20 to-transparent'}`}>
-          <div className="flex-grow flex items-center justify-center text-center p-2 mt-4">
-            <span className="text-[11px] font-cinzel font-bold text-white uppercase leading-tight tracking-wider drop-shadow-md group-hover:scale-110 transition-transform">
+        <div className={`absolute inset-0 flex flex-col p-3 transition-all duration-500 ${highlightType && isTensioning ? 'bg-rose-950/30' : highlightType && isBlocking ? 'bg-slate-950/50' : 'bg-gradient-to-t from-slate-950 via-slate-900/10 to-transparent'}`}>
+          <div className="flex-grow flex flex-col items-center justify-center text-center p-2 mt-4 space-y-2">
+            <span className="text-[11px] font-cinzel font-bold text-white uppercase leading-tight tracking-wider drop-shadow-md group-hover:scale-110 transition-transform z-10">
               {card.name}
             </span>
+            <div className="w-10 h-0.5 bg-indigo-500/40 rounded-full z-10"></div>
           </div>
-          <div className="mt-auto space-y-1">
+          <div className="mt-auto space-y-1 z-10">
             <div className="flex justify-between items-end border-t border-white/10 pt-1.5">
               <span className="text-[10px] font-bold text-indigo-400">{card.id}</span>
               <span className={`text-[8px] font-black uppercase tracking-widest ${card.polarity === Polarity.POSITIVE ? 'text-emerald-400' : card.polarity === Polarity.NEGATIVE ? 'text-rose-400' : 'text-slate-400'}`}>{card.polarity}</span>
@@ -173,9 +196,19 @@ const App: React.FC = () => {
     return cardId ? LENORMAND_CARDS.find(c => c.id === cardId) : null;
   }, [selectedHouse, currentBoard]);
 
-  const currentHouse = useMemo(() => {
+  // Fix: Adding explicit return type to currentHouse useMemo to solve TypeScript property access errors
+  const currentHouse = useMemo((): LenormandHouse | null | undefined => {
     if (selectedHouse === null) return null;
     if (spreadType === 'relogio') {
+      // Fix: Adding missing properties to match LenormandHouse type and satisfy TypeScript property access for 'month'
+      if (selectedHouse === 12) return { 
+        id: 113, 
+        name: "Tom da Leitura", 
+        polarity: Polarity.NEUTRAL,
+        theme: "Síntese Central", 
+        technicalDescription: "A energia central que dita o tom e a vibração predominante de todo o ciclo anual.", 
+        pedagogicalRule: "Ponto focal de interpretação." 
+      } as LenormandHouse;
       return LENORMAND_HOUSES.find(h => h.id === 101 + selectedHouse);
     }
     return LENORMAND_HOUSES[selectedHouse];
@@ -218,7 +251,7 @@ const App: React.FC = () => {
   }, [selectedHouse, spreadType, currentBoard]);
 
   useEffect(() => {
-    setBoard(generateShuffledArray(spreadType === 'relogio' ? 12 : 36));
+    setBoard(generateShuffledArray(spreadType === 'relogio' ? 13 : 36));
     setSelectedHouse(null);
     setCardAnalysis(null);
   }, [spreadType]);
@@ -234,7 +267,7 @@ const App: React.FC = () => {
       if (existing !== -1) newB[existing] = null;
       newB[selectedHouse] = cardId;
       setManualBoard(newB);
-      setSelectedHouse((selectedHouse + 1) % (spreadType === 'relogio' ? 12 : 36));
+      setSelectedHouse((selectedHouse + 1) % (spreadType === 'relogio' ? 13 : 36));
       e.currentTarget.reset();
     }
   };
@@ -249,6 +282,7 @@ const App: React.FC = () => {
         if (Geometry.getDiagonaisSuperiores(selectedHouse).includes(idx)) return 'diag-up';
         if (Geometry.getDiagonaisInferiores(selectedHouse).includes(idx)) return 'diag-down';
     } else {
+        if (idx === 12) return 'center';
         if (idx === Geometry.getOposicaoRelogio(selectedHouse)) return 'axis';
     }
     return null;
@@ -313,57 +347,6 @@ const App: React.FC = () => {
                         <Edit3 size={14} /> Manual
                       </button>
                     </div>
-
-                    {boardMode === 'manual' && (
-                      <div className="bg-slate-950/40 p-4 rounded-2xl border border-slate-800/60 animate-in fade-in slide-in-from-top-2">
-                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">Preenchimento {selectedHouse !== null ? `(Casa ${selectedHouse + 1})` : ''}</p>
-                        <form onSubmit={handleManualEntry} className="flex gap-2">
-                           <input 
-                            name="cardId" 
-                            type="number" 
-                            min="1" 
-                            max="36" 
-                            placeholder="ID" 
-                            className="w-14 bg-slate-900 border border-slate-800 rounded-lg px-2 py-2 text-xs text-center text-white outline-none focus:border-indigo-600"
-                           />
-                           <button type="submit" className="flex-grow bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[9px] font-black uppercase transition-all shadow-lg active:scale-95">
-                             Fixar
-                           </button>
-                        </form>
-                      </div>
-                    )}
-
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Nível de Estudo</span>
-                        <div className="grid grid-cols-1 gap-1">
-                          {(['Iniciante', 'Intermediário', 'Avançado'] as StudyLevel[]).map(l => (
-                            <button 
-                              key={l} 
-                              onClick={() => setDifficultyLevel(l)} 
-                              className={`text-[9px] font-bold px-3 py-2 rounded-lg text-left transition-all ${difficultyLevel === l ? 'bg-slate-800 border border-indigo-500/50 text-indigo-100 shadow-sm' : 'text-slate-500 hover:bg-slate-800'}`}
-                            >
-                              {l}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">Expansão Temática</span>
-                        <div className="grid grid-cols-1 gap-1">
-                          {(['Geral', 'Amor & Relacionamentos', 'Trabalho & Finanças', 'Espiritualidade & Caminho'] as ReadingTheme[]).map(t => (
-                            <button 
-                              key={t} 
-                              onClick={() => setReadingTheme(t)} 
-                              className={`flex items-center gap-2 text-[9px] font-bold px-3 py-2 rounded-lg text-left transition-all ${readingTheme === t ? 'bg-indigo-900/40 border border-indigo-500/50 text-indigo-100 shadow-sm' : 'text-slate-500 hover:bg-slate-800'}`}
-                            >
-                              {themeIcons[t]} {t}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
                   </div>
                </div>
             </div>
@@ -406,7 +389,7 @@ const App: React.FC = () => {
                  <span className="text-[10px] font-black text-indigo-100 uppercase">{score} Pts</span>
               </div>
               <button 
-                onClick={() => setBoard(generateShuffledArray(spreadType === 'relogio' ? 12 : 36))} 
+                onClick={() => setBoard(generateShuffledArray(spreadType === 'relogio' ? 13 : 36))} 
                 className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 shadow-xl shadow-indigo-600/20"
               >
                  <RotateCcw size={14} /> Reembaralhar
@@ -414,7 +397,7 @@ const App: React.FC = () => {
            </div>
         </header>
 
-        <div className="flex-grow overflow-y-auto p-10 custom-scrollbar bg-slate-950">
+        <div className="flex-grow overflow-y-auto p-10 custom-scrollbar bg-slate-950 relative">
            {view === 'board' && spreadType === 'mesa-real' && (
              <div className="max-w-6xl mx-auto space-y-12 pb-24">
                 <div className="grid grid-cols-8 gap-3">
@@ -422,11 +405,11 @@ const App: React.FC = () => {
                      <CardVisual key={index} card={cardId ? LENORMAND_CARDS.find(c => c.id === cardId) : null} houseId={index + 1} isSelected={selectedHouse === index} highlightType={getGeometryHighlight(index)} onClick={() => setSelectedHouse(index)} level={difficultyLevel} />
                    ))}
                 </div>
-                <div className="flex flex-col items-center gap-4 pt-6 border-t border-slate-800/40">
-                   <h4 className="text-[11px] font-black text-indigo-400 uppercase tracking-[0.5em] mb-2 animate-pulse">Veredito</h4>
-                   <div className="flex justify-center gap-4">
+                <div className="flex flex-col items-center gap-4 pt-10 border-t border-slate-800/40">
+                   <h4 className="text-[11px] font-black text-indigo-400 uppercase tracking-[0.5em] mb-4 animate-pulse">Veredito Final</h4>
+                   <div className="flex justify-center gap-6">
                       {currentBoard.slice(32, 36).map((cardId, index) => (
-                        <div key={index + 32} className="w-32"><CardVisual card={cardId ? LENORMAND_CARDS.find(c => c.id === cardId) : null} houseId={index + 33} isSelected={selectedHouse === index + 32} highlightType={getGeometryHighlight(index + 32)} onClick={() => setSelectedHouse(index + 32)} level={difficultyLevel} /></div>
+                        <div key={index + 32} className="w-36"><CardVisual card={cardId ? LENORMAND_CARDS.find(c => c.id === cardId) : null} houseId={index + 33} isSelected={selectedHouse === index + 32} highlightType={getGeometryHighlight(index + 32)} onClick={() => setSelectedHouse(index + 32)} level={difficultyLevel} /></div>
                       ))}
                    </div>
                 </div>
@@ -434,21 +417,52 @@ const App: React.FC = () => {
            )}
 
            {view === 'board' && spreadType === 'relogio' && (
-             <div className="max-w-4xl mx-auto flex items-center justify-center min-h-[70vh] relative pb-24">
-                <div className="relative w-[32rem] h-[32rem] border-2 border-slate-800/40 rounded-full flex items-center justify-center">
+             <div className="max-w-6xl mx-auto flex items-center justify-center min-h-[85vh] relative pb-24 origin-center scale-95">
+                <div className="relative w-[48rem] h-[48rem] border-2 border-slate-800/10 rounded-full flex items-center justify-center shadow-[inset_0_0_100px_rgba(79,70,229,0.03)] bg-[radial-gradient(circle_at_center,_rgba(79,70,229,0.02)_0%,_transparent_70%)]">
+                   
+                   {/* Mandala Decorativa */}
+                   <div className="absolute inset-0 border border-indigo-500/5 rounded-full scale-[0.98] border-dashed animate-[spin_120s_linear_infinite]"></div>
+                   <div className="absolute inset-0 border border-indigo-500/10 rounded-full scale-[0.7] opacity-20 border-dashed animate-[spin_80s_linear_reverse_infinite]"></div>
+                   
+                   {/* Carta Central: Tom da Leitura */}
+                   <div className="absolute w-40 z-30 transition-all hover:scale-105 duration-500">
+                      <div className="relative">
+                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 whitespace-nowrap z-20">
+                           <div className="flex items-center gap-2 bg-amber-400/10 border border-amber-400/30 px-3 py-1 rounded-full shadow-lg">
+                              <Eye size={12} className="text-amber-400" />
+                              <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Tom da Leitura</span>
+                           </div>
+                           <div className="w-0.5 h-4 bg-gradient-to-b from-amber-400/40 to-transparent"></div>
+                        </div>
+                        <div className="rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(251,191,36,0.2)]">
+                          <CardVisual 
+                            card={currentBoard[12] ? LENORMAND_CARDS.find(c => c.id === currentBoard[12]) : null} 
+                            houseId={13} 
+                            isSelected={selectedHouse === 12} 
+                            highlightType="center" 
+                            onClick={() => setSelectedHouse(12)} 
+                            level={difficultyLevel} 
+                          />
+                        </div>
+                      </div>
+                   </div>
+
                    {currentBoard.slice(0, 12).map((cardId, index) => {
                       const angle = (index * 30) - 90;
-                      const x = 50 + 40 * Math.cos(angle * Math.PI / 180);
-                      const y = 50 + 40 * Math.sin(angle * Math.PI / 180);
+                      // Raio otimizado para evitar sobreposição total
+                      const radius = 42; 
+                      const x = 50 + radius * Math.cos(angle * Math.PI / 180);
+                      const y = 50 + radius * Math.sin(angle * Math.PI / 180);
                       return (
-                        <div key={index} className="absolute w-28 -translate-x-1/2 -translate-y-1/2" style={{ left: `${x}%`, top: `${y}%` }}>
+                        <div key={index} className="absolute w-32 -translate-x-1/2 -translate-y-1/2 z-10 transition-transform duration-300 hover:z-40" style={{ left: `${x}%`, top: `${y}%` }}>
                            <CardVisual card={cardId ? LENORMAND_CARDS.find(c => c.id === cardId) : null} houseId={index + 1} isSelected={selectedHouse === index} highlightType={getGeometryHighlight(index)} onClick={() => setSelectedHouse(index)} level={difficultyLevel} />
                         </div>
                       );
                    })}
-                   <div className="flex flex-col items-center gap-2 opacity-10">
-                      <Clock size={64} />
-                      <span className="font-cinzel text-xs font-black">Mandala Anual</span>
+                   
+                   <div className="flex flex-col items-center gap-4 opacity-[0.03] pointer-events-none select-none">
+                      <Clock size={200} />
+                      <span className="font-cinzel text-5xl font-black tracking-[0.5em] text-center">MANDALA ANUAL</span>
                    </div>
                 </div>
              </div>
@@ -489,7 +503,7 @@ const App: React.FC = () => {
       </main>
 
       {/* PAINEL LATERAL DIREITO - MENTOR */}
-      <aside className={`w-[30rem] flex flex-col border-l border-slate-800 transition-all duration-500 z-30 shadow-2xl bg-slate-900`}>
+      <aside className={`w-[32rem] flex flex-col border-l border-slate-800 transition-all duration-500 z-30 shadow-2xl bg-slate-900`}>
         <div className="p-8 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 backdrop-blur-sm">
            <div className="flex items-center gap-4">
               <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20"><Activity className="text-emerald-500" size={20} /></div>
@@ -504,29 +518,39 @@ const App: React.FC = () => {
           {selectedHouse !== null ? (
             <div className="space-y-10 animate-in slide-in-from-right duration-500">
                <section className="space-y-8">
-                 <div className="bg-slate-950/60 p-8 rounded-[2.5rem] border border-slate-800/80 shadow-2xl relative overflow-hidden group min-h-[16rem]">
-                    <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-48 h-64 opacity-5 pointer-events-none rotate-6 transition-transform group-hover:rotate-12 duration-700">
-                      <div className="w-full h-full border-4 border-indigo-500 rounded-3xl relative overflow-hidden flex items-center justify-center bg-indigo-500/5">
-                        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500/50 via-transparent to-transparent"></div>
+                 <div className="bg-slate-950/60 p-8 rounded-[2.5rem] border border-slate-800/80 shadow-2xl relative overflow-hidden group min-h-[18rem]">
+                    {/* Visualização da Miniatura da Imagem no Painel Lateral */}
+                    <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-56 h-72 opacity-20 pointer-events-none rotate-6 transition-transform group-hover:rotate-12 duration-700">
+                      <div className="w-full h-full border-4 border-indigo-500/30 rounded-3xl relative overflow-hidden flex items-center justify-center bg-indigo-500/5 shadow-[inset_0_0_40px_rgba(0,0,0,0.5)]">
                         {selectedCard && (
-                          <div className="flex flex-col items-center gap-2">
-                             <span className="text-7xl font-cinzel font-black text-indigo-500 select-none">{selectedCard.id}</span>
-                             <div className="w-12 h-0.5 bg-indigo-500/40 rounded-full"></div>
-                          </div>
+                          <>
+                             <img 
+                               src={getCardImageUrl(selectedCard.id)} 
+                               alt={selectedCard.name} 
+                               className="absolute inset-0 w-full h-full object-cover mix-blend-overlay"
+                             />
+                             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
+                          </>
+                        )}
+                        {/* Placeholder tracejado se não houver carta (embora selectedCard já garanta) */}
+                        {!selectedCard && (
+                           <div className="w-full h-full border-4 border-dashed border-slate-800 rounded-3xl flex items-center justify-center">
+                              <Sparkles className="text-slate-800" size={32} />
+                           </div>
                         )}
                       </div>
                     </div>
 
-                    <div className="relative z-10">
+                    <div className="relative z-10 pr-20">
                       <div className="flex justify-between items-start mb-6">
                          <span className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.3em]">CARTA SELECIONADA</span>
                          {selectedCard && (<div className={`w-3 h-3 rounded-full ${selectedCard.polarity === Polarity.POSITIVE ? 'bg-emerald-500' : selectedCard.polarity === Polarity.NEGATIVE ? 'bg-rose-500' : 'bg-slate-400'} border border-black/20 shadow-sm`} />)}
                       </div>
-                      <h3 className="text-3xl font-cinzel font-bold text-white mb-3 tracking-wider">{selectedCard ? selectedCard.name : 'Vazio'}</h3>
+                      <h3 className="text-4xl font-cinzel font-bold text-white mb-3 tracking-wider drop-shadow-lg">{selectedCard ? selectedCard.name : 'Vazio'}</h3>
                       
                       {selectedCard && (
-                        <div className="bg-slate-900/60 p-6 rounded-[2rem] border border-slate-800/50 space-y-4 mb-6 transition-all shadow-inner max-w-[85%]">
-                          <div className="flex items-center gap-2 text-[10px] font-black text-indigo-400 uppercase tracking-4em">
+                        <div className="bg-slate-900/80 p-6 rounded-[2rem] border border-slate-800/50 space-y-4 mb-6 transition-all shadow-inner backdrop-blur-sm">
+                          <div className="flex items-center gap-2 text-[10px] font-black text-indigo-400 uppercase tracking-widest">
                             <Clock size={14} /> Panorama Temporal
                           </div>
                           
@@ -568,7 +592,7 @@ const App: React.FC = () => {
                          <p className="text-sm text-slate-300 leading-relaxed font-medium bg-indigo-500/5 p-4 rounded-2xl border border-indigo-500/10">
                             <strong>Interpretação Breve:</strong> {selectedCard ? selectedCard.briefInterpretation : 'Selecione uma casa ocupada.'}
                          </p>
-                         <p className="text-sm text-slate-400 leading-relaxed italic border-l-4 border-indigo-600/40 pl-6 py-2 max-w-[90%]">
+                         <p className="text-sm text-slate-400 leading-relaxed italic border-l-4 border-indigo-600/40 pl-6 py-2 max-w-[95%]">
                             <strong>Na Casa de Origem:</strong> "{selectedCard?.interpretationAtOrigin}"
                          </p>
                       </div>
@@ -576,39 +600,40 @@ const App: React.FC = () => {
                  </div>
 
                  <div className="space-y-4">
-                   <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-0.2em px-4 flex items-center gap-3">
-                     {spreadType === 'relogio' ? <Clock size={14}/> : <LayoutGrid size={14}/>} 
-                     {spreadType === 'relogio' ? 'Casa do Relógio (Ciclo Anual)' : 'Contexto da Casa (Mesa Real)'}
+                   <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-4 flex items-center gap-3">
+                     <LayoutGrid size={14} className="text-slate-600" /> CONTEXTO DA CASA ({spreadType === 'relogio' ? 'RELÓGIO' : 'MESA REAL'})
                    </h5>
-                   <div className="bg-indigo-600/5 p-8 rounded-[2rem] border border-indigo-500/10 shadow-sm">
-                      <p className="text-[11px] font-black text-indigo-300 uppercase mb-2 tracking-widest">
-                        {spreadType === 'relogio' 
-                          ? `${currentHouse?.name} — ${currentHouse?.month}` 
-                          : `Casa ${selectedHouse + 1}: ${currentHouse?.name}`
-                        }
-                      </p>
-                      <p className="text-sm text-slate-300 leading-relaxed font-medium">
-                        {currentHouse?.technicalDescription}
-                      </p>
-                      <div className="mt-4 pt-4 border-t border-indigo-500/5 flex items-start gap-3">
-                         {spreadType === 'mesa-real' ? (
-                           <>
-                             <Info size={14} className="text-indigo-400 flex-shrink-0 mt-0.5" />
-                             <span className="text-[10px] text-slate-500 font-bold uppercase leading-tight">{currentHouse?.pedagogicalRule}</span>
-                           </>
-                         ) : (
-                           <>
-                             <Target size={14} className="text-indigo-400" />
-                             <span className="text-[10px] text-slate-500 font-bold uppercase">{currentHouse?.theme}</span>
-                           </>
-                         )}
+                   <div className="bg-indigo-600/5 p-8 rounded-[2rem] border border-indigo-500/10 shadow-sm relative overflow-hidden transition-all hover:bg-indigo-600/10">
+                      <div className="relative z-10">
+                        <p className="text-[11px] font-black text-indigo-300 uppercase mb-2 tracking-[0.2em]">
+                          {spreadType === 'relogio' 
+                            ? `${currentHouse?.name} — ${currentHouse?.month || 'Sinal Central'}` 
+                            : `Casa ${selectedHouse + 1}: ${currentHouse?.name}`
+                          }
+                        </p>
+                        <p className="text-sm text-slate-300 leading-relaxed font-medium mb-4">
+                          {currentHouse?.technicalDescription}
+                        </p>
+                        <div className="pt-4 border-t border-indigo-500/10 flex items-start gap-3">
+                           {spreadType === 'mesa-real' ? (
+                             <>
+                               <Info size={14} className="text-indigo-400 flex-shrink-0 mt-0.5" />
+                               <span className="text-[10px] text-slate-500 font-bold uppercase leading-tight tracking-wide">{currentHouse?.pedagogicalRule}</span>
+                             </>
+                           ) : (
+                             <>
+                               <Target size={14} className="text-indigo-400" />
+                               <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">{currentHouse?.theme}</span>
+                             </>
+                           )}
+                        </div>
                       </div>
                    </div>
                  </div>
 
-                 {/* Seção das Diagonais e Modulações Técnicas */}
+                 {/* Detalhamento de Geometrias Ativas com Miniaturas de Imagem */}
                  {spreadType === 'mesa-real' && selectedHouse !== null && (
-                   <div className="space-y-10 animate-in slide-in-from-bottom-6 duration-700">
+                   <div className="space-y-10 animate-in slide-in-from-bottom-8 duration-700">
                      
                      {/* Diagonais Superiores (Ascendentes) */}
                      <div className="space-y-4">
@@ -660,13 +685,10 @@ const App: React.FC = () => {
                               <span className="text-[10px] text-emerald-300 font-bold">Mapeia Sustentação</span>
                            </div>
                         </div>
-                        <p className="text-[9px] text-slate-500 italic leading-relaxed">
-                          "As diagonais não anulam o significado, elas modulam o fluxo e a base da experiência."
-                        </p>
                      </div>
 
                      <div className="space-y-4">
-                        <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-0.2em px-4 flex items-center gap-3">
+                        <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-4 flex items-center gap-3">
                           <ArrowRightLeft size={14} className="text-cyan-500" /> Conexões por Espelhamento
                         </h5>
                         <div className="space-y-3 px-2">
@@ -681,7 +703,7 @@ const App: React.FC = () => {
                      </div>
 
                      <div className="space-y-4">
-                        <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-0.2em px-4 flex items-center gap-3">
+                        <h5 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-4 flex items-center gap-3">
                           <MoveDiagonal size={14} className="text-fuchsia-500" /> Influências do Salto do Cavalo
                         </h5>
                         <div className="space-y-3 px-2">
@@ -728,7 +750,7 @@ const App: React.FC = () => {
                </section>
             </div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-center p-12 opacity-20"><Compass size={64} className="mb-6" /><p className="text-sm font-bold uppercase tracking-0.2em leading-relaxed max-w-[200px]">Selecione uma casa para carregar a Exploração Técnica do Laboratório.</p></div>
+            <div className="h-full flex flex-col items-center justify-center text-center p-12 opacity-20"><Compass size={64} className="mb-6" /><p className="text-sm font-bold uppercase tracking-[0.2em] leading-relaxed max-w-[200px]">Selecione uma casa para carregar a Exploração Técnica do Laboratório.</p></div>
           )}
         </div>
       </aside>

@@ -6,7 +6,8 @@ export const GEOMETRY_GUIDE = {
   MIRROR: { title: "Espelho 🪞", desc: "Dobre a mesa. Pontas opostas revelam o equilíbrio secreto." },
   KNIGHT: { title: "Cavalo 🐎", desc: "2 casas + 1 (em L). Revela fofocas e o que está 'dobrando a esquina'." },
   FRAME: { title: "Moldura 🖼️", desc: "Casas 1, 8, 25 e 32. O clima geral da vida." },
-  VEREDITO: { title: "Veredito Final ⚖️", desc: "Casas 33, 34, 35 e 36. O destino inevitável." }
+  VEREDITO: { title: "Veredito Final ⚖️", desc: "Casas 33, 34, 35 e 36. O destino inevitável." },
+  DIAGONALS: { title: "Diagonais 🔺🔻", desc: "Influências ascendentes e descendentes que modulam a força da carta." }
 };
 
 export const LENORMAND_CARDS: LenormandCard[] = [
@@ -82,7 +83,7 @@ export const LENORMAND_HOUSES: LenormandHouse[] = [
   { id: 31, name: "Sol", polarity: Polarity.POSITIVE, theme: "Sucesso/Vitalidade", technicalDescription: "Revela a verdade, traz sucesso, clareza total e vitalidade.", pedagogicalRule: "Espelhamento: 26 e 07." },
   { id: 32, name: "Lua", polarity: Polarity.POSITIVE, theme: "Intuição/Mérito", technicalDescription: "Confere reconhecimento, méritos, intuição ou flutuação emocional.", pedagogicalRule: "Espelhamento: 25 e 08." },
   { id: 33, name: "Chave", polarity: Polarity.POSITIVE, theme: "Veredito/Solução", technicalDescription: "Abre caminhos e entrega a solução para o problema.", pedagogicalRule: "Espelha c/ 36." },
-  { id: 34, name: "Peixes", polarity: Polarity.POSITIVE, theme: "Veredito/Recursos", technicalDescription: "Movimenta recursos financeiros e garante fluidez material.", pedagogicalRule: "Espelha c/ 35." },
+  { id: 34, name: "Peixes", polarity: Polarity.POSITIVE, theme: "Veredito/Recursos", technicalDescription: "Movimenta recursos financeiros e garante falicidade material.", pedagogicalRule: "Espelha c/ 35." },
   { id: 35, name: "Âncora", polarity: Polarity.POSITIVE, theme: "Veredito/Segurança", technicalDescription: "Estabiliza, fixa e traz segurança (ou estagnação) ao resultado.", pedagogicalRule: "Espelha c/ 34." },
   { id: 36, name: "Cruz", polarity: Polarity.NEUTRAL, theme: "Veredito/Destino", technicalDescription: "Determina o destino, provações de fé e a vitória final.", pedagogicalRule: "Espelha c/ 33." },
 
@@ -122,7 +123,8 @@ export const FUNDAMENTALS_DATA: FundamentalModule[] = [
       { title: 'PONTE', text: 'O dono da casa diz a causa. Ex: Se a carta caiu na 24, olhe onde a 24 está.' },
       { title: 'ESPELHO', text: 'Dobre a mesa. Pontas opostas revelam o equilíbrio secreto.' },
       { title: 'CAVALO', text: 'Movimento em L (2 casas + 1). Revela fofocas e o que está dobrando a esquina.' },
-      { title: 'MOLDURA', text: 'As casas 1, 8, 25 e 32 definem o clima geral da vida do consulente.' },
+      { title: 'DIAGONAL SUPERIOR (🔺)', text: 'Representa o "Campo de Ascensão". Mostra influências externas em crescimento e tendências que ganham força acima da situação atual.', example: 'Expectativas e o que está sendo construído.' },
+      { title: 'DIAGONAL INFERIOR (🟫)', text: 'Representa o "Campo de Sustentação". Revela as raízes do problema e o que está sendo drenado ou sustentado no subterrâneo.', example: 'Consequências plantadas e base estrutural.' },
       { title: 'VEREDITO FINAL', text: 'As casas 33 a 36 mostram o destino inevitável e o conselho final.' }
     ]
   },
@@ -139,14 +141,14 @@ export const FUNDAMENTALS_DATA: FundamentalModule[] = [
   },
   {
     id: 'f4',
-    title: 'Técnicas de Leitura',
-    description: 'Como integrar as camadas de interpretação.',
-    content: 'Métodos para uma leitura rica e estruturada.',
+    title: 'Relógio Cigano (Mandala Anual)',
+    description: 'Interpretação da jornada cíclica dos 12 meses.',
+    content: 'Estrutura astrológica aplicada ao Lenormand.',
     concepts: [
-      { title: 'Pares e Frases', text: 'Leia cartas adjacentes como histórias. Ex: Cavaleiro + Anel = Mensageiro de um compromisso.' },
-      { title: 'Cantinho (Moldura)', text: 'Os 4 cantos oferecem um panorama geral da situação atual.' },
-      { title: 'Diagonais', text: 'Formam um X com o consulente no centro. Superior-esquerda = Pensamento claro. Inferior-direita = Possibilidades ocultas.' },
-      { title: 'Cartas de Alerta', text: 'Caixão, Serpente e Ratos indicam problemas que exigem atenção especial. Não devem ser ignoradas.' }
+      { title: 'JORNADA DOS 12 MESES', text: 'Cada uma das 12 casas exteriores representa um mês (Janeiro a Dezembro) e uma área da vida inspirada no zodíaco.', example: 'Casa 1 (Eu), Casa 4 (Lar), Casa 7 (Parcerias).' },
+      { title: 'EIXOS DE OPOSIÇÃO (Eixos do Tempo)', text: 'As cartas opostas (180°) revelam tensões e equilíbrios. O que você planta num mês (Casa 1) reverbera na oposição (Casa 7).', example: 'Eixo 1-7 (Eu vs Outro), Eixo 4-10 (Vida Privada vs Carreira).' },
+      { title: 'O TOM DA LEITURA (13ª CARTA)', text: 'A carta central é o "Coração da Mandala". Ela dita a vibração predominante, o clima e o conselho mestre para todo o ciclo anual.', example: 'Se o Sol cai no centro, o ano é de clareza e sucesso independente das casas individuais.' },
+      { title: 'SÍNTESE TRIMESTRAL', text: 'Agrupar casas de 3 em 3 para entender as estações do ano e os grandes movimentos de energia.', example: 'Jan-Mar (Início/Plantio), Abr-Jun (Crescimento/Base).' }
     ]
   }
 ];
