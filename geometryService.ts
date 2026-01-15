@@ -1,4 +1,3 @@
-
 export const getMoldura = () => [0, 7, 24, 31];
 
 export const getEspelhamentos = (index: number) => {
@@ -61,10 +60,60 @@ export const getOposicaoRelogio = (index: number) => {
   return (index + 6) % 12;
 };
 
-export const getEixoConceitualRelogio = (index: number): string | null => {
-  if (index === 2 || index === 8) return "Eixo Horizontal (Expansão e Visão de Futuro)";
-  if (index === 5 || index === 11) return "Eixo Vertical (Inconsciente e Espiritualidade)";
-  if (index === 1 || index === 7) return "Eixo Social (Matéria vs Transformação)";
-  if (index === 3 || index === 9) return "Eixo Emocional (Base vs Realização)";
-  return null;
+export interface RelogioAxis {
+  name: string;
+  type: 'Horizontal' | 'Vertical' | 'Oblíquo';
+  description: string;
+  tensionKey: string;
+}
+
+export const getAxisDataRelogio = (index: number): RelogioAxis | null => {
+  const normalizedIndex = index % 6;
+  switch (normalizedIndex) {
+    case 0: return {
+      name: "Eixo da Identidade (1-7)",
+      type: 'Horizontal',
+      description: "Analisa a projeção do Eu sobre o Outro. É o eixo do encontro e do confronto pessoal.",
+      tensionKey: "O desafio aqui é não se anular nas parcerias (Casa 7) nem se isolar no ego (Casa 1)."
+    };
+    case 1: return {
+      name: "Eixo dos Recursos (2-8)",
+      type: 'Oblíquo',
+      description: "Mede a tensão entre o que eu possuo e o que eu transformo ou compartilho com o coletivo.",
+      tensionKey: "Equilibre a segurança material com a necessidade de morte simbólica e renascimento."
+    };
+    case 2: return {
+      name: "Eixo do Conhecimento (3-9)",
+      type: 'Oblíquo',
+      description: "Equilibra a mente concreta/cotidiana com as grandes filosofias e visões de longo alcance.",
+      tensionKey: "Evite o excesso de detalhes práticos que impedem a visão do horizonte expandido."
+    };
+    case 3: return {
+      name: "Eixo da Segurança (4-10)",
+      type: 'Vertical',
+      description: "O pilar entre a vida privada (raízes) e a vida pública (carreira/reputação).",
+      tensionKey: "Sem uma base emocional sólida (Casa 4), o sucesso público (Casa 10) torna-se frágil."
+    };
+    case 4: return {
+      name: "Eixo da Criação (5-11)",
+      type: 'Oblíquo',
+      description: "Trata da relação entre a alegria individual e os projetos para o bem comum.",
+      tensionKey: "Transforme seu prazer pessoal em algo que sirva à rede e ao futuro da comunidade."
+    };
+    case 5: return {
+      name: "Eixo do Serviço (6-12)",
+      type: 'Oblíquo',
+      description: "Investiga o equilíbrio entre as obrigações da rotina física e a dissolução no espiritual.",
+      tensionKey: "Não se perca no dever diário a ponto de esquecer a transcendência e o descanso da alma."
+    };
+    default: return null;
+  }
 };
+
+export const getEixoConceitualRelogio = (index: number): string | null => {
+  return getAxisDataRelogio(index)?.name || null;
+};
+
+export const getDescricaoEixoRelogio = (index: number): string => {
+  return getAxisDataRelogio(index)?.description || "Eixo de modulação temporal.";
+}

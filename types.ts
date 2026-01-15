@@ -1,4 +1,3 @@
-
 export enum Polarity {
   POSITIVE = 'Positiva',
   NEGATIVE = 'Negativa',
@@ -17,7 +16,7 @@ export enum Timing {
 }
 
 export type StudyLevel = 'Iniciante' | 'Intermediário' | 'Avançado';
-export type ReadingTheme = 'Geral' | 'Amor & Relacionamentos' | 'Trabalho & Finanças' | 'Espiritualidade & Caminho';
+export type ReadingTheme = 'Geral' | 'Amor & Relacionamentos' | 'Trabalho & Finanças' | 'Espiritualidade & Caminho de Vida';
 
 export interface LenormandCard {
   id: number;

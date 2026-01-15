@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { LENORMAND_CARDS, LENORMAND_HOUSES } from "./constants";
 import { SpreadType, StudyLevel, ReadingTheme } from "./types";
@@ -32,6 +31,11 @@ export const getDetailedCardAnalysis = async (
 
   if (!house) return "Erro ao localizar contexto da casa.";
 
+  // Cálculo da Ponte para o contexto da IA
+  const bridgeIndex = spreadType === 'mesa-real' ? boardState.findIndex(id => id === (selectedIndex + 1)) : -1;
+  const bridgeCardName = bridgeIndex !== -1 ? getCardName(boardState[bridgeIndex]) : null;
+  const bridgeHouseName = bridgeIndex !== -1 ? LENORMAND_HOUSES[bridgeIndex]?.name : null;
+
   const context = {
     spreadType,
     level,
@@ -40,10 +44,19 @@ export const getDetailedCardAnalysis = async (
         house: house.name, 
         house_theme_original: house.theme,
         polarity: card?.polarity,
-        timing: card?.timingSpeed 
+        timing: {
+          speed: card?.timingSpeed,
+          scale: card?.timingScale,
+          category: card?.timingCategory
+        }
     },
     reading_expansion_theme: theme,
     geometries: spreadType === 'mesa-real' ? {
+        ponte_causa_raiz: {
+          target_card: bridgeCardName,
+          target_house: bridgeHouseName,
+          explanation: "O dono da casa selecionada está nesta outra posição."
+        },
         molduras: [0, 7, 24, 31].map(idx => getCardName(boardState[idx])),
         espelho_h: getCardName(boardState[selectedIndex >= 32 ? selectedIndex : (Math.floor(selectedIndex/8)*8 + (7-(selectedIndex%8)))]),
         veredito: boardState.slice(32, 36).map(id => getCardName(id)),
@@ -60,30 +73,34 @@ export const getDetailedCardAnalysis = async (
     Você é o Mentor Virtual de Baralho Cigano do ecossistema LUMINA.
     Sua missão é gerar uma SÍNTESE PEDAGÓGICA para um estudante de nível ${level}.
     
-    EXPANSÃO TEMÁTICA ATUAL: ${theme}
+    EXPANSÃO TEMÁTICA ATUAL (FOCO): ${theme}
     TIPO DE TIRAGEM: ${spreadType === 'mesa-real' ? 'Mesa Real (36 casas)' : 'Tiragem em Relógio (12 meses/casas)'}
     CONTEXTO TÉCNICO: ${JSON.stringify(context, null, 2)}
     
-    INSTRUÇÕES PARA TIRAGEM EM RELÓGIO:
-    1. Analise a OPOSIÇÃO (180°): Identifique a carta oposta ("${context.geometries.oposto}") e explique a tensão ou complemento.
-    2. Analise o EIXO CONCEITUAL: Se a casa pertencer a um eixo (Social, Emocional, etc), explique o impacto.
-    3. Carta Central ("${context.geometries.carta_central_reguladora}"): Explique como ela atua como REGULADORA de todo o ciclo anual.
-    
+    INSTRUÇÕES ESPECÍFICAS SOBRE O TEMPO:
+    - A carta atual possui a velocidade "${card?.timingSpeed}", escala "${card?.timingScale}" e impacto "${card?.timingCategory}".
+    - Explique como essa dinâmica de tempo afeta o tema "${theme}".
+    - Exemplo: Se a categoria é "Acelera" em um tema de "Amor", as coisas acontecem rápido. Se "Bloqueia", o consulente precisa esperar.
+
     ESTRUTURA DA RESPOSTA (Markdown):
     
-    1. **Foco Temático: ${theme}**: Manifestação da energia na casa "${house.name}".
+    1. **Dinâmica Temporal e Fluxo**: 
+       Explique a escala de tempo (${card?.timingScale}) e como a categoria (${card?.timingCategory}) modula a rapidez dos acontecimentos no tema ${theme}.
     
-    2. **Análise de Eixo e Oposição**: 
-       Explique o diálogo técnico entre a carta selecionada e sua oposta. Como elas se equilibram?
+    2. **Foco Temático: ${theme}**: Manifestação da energia na casa "${house.name}".
     
-    3. **Dinamismo e Tempo Comparado**: Compare a velocidade da carta atual com a oposta. O processo antecipa ou atrasa?
+    3. **A Origem do Tema (Técnica da Ponte)**: 
+       Explique o que a posição do dono da casa revela sobre a causa raiz sob o prisma do tema "${theme}".
     
-    4. **SÍNTESE TÉCNICA (O Veredito do Mentor)**: 
-       Combine: Carta + Casa + Eixo + Carta Central. Gere uma frase curta de impacto pedagógico.
+    4. **Análise de Campo e Geometria**: 
+       Como os espelhamentos ou diagonais modulam essa energia focada em "${theme}"?
     
-    5. **A Voz do Mentor**: 
+    5. **SÍNTESE TÉCNICA (O Veredito do Mentor)**: 
+       Gere uma frase curta de impacto pedagógico integrando o significado base ao tema.
+    
+    6. **A Voz do Mentor**: 
        - Uma provocação ética sobre o ciclo.
-       - 2 perguntas-guia para o nível ${level}.
+       - 2 perguntas-guia para o nível ${level} específicas para o tema "${theme}".
 
     DIRETRIZES ÉTICAS:
     - JAMAIS preveja morte ou fatalidades.
