@@ -90,7 +90,7 @@ export const getDetailedCardAnalysis = async (
     2. **Foco Temático: ${theme}**: Manifestação da energia na casa "${house.name}".
     
     3. **A Origem do Tema (Técnica da Ponte)**: 
-       Explique o que a posição do dono da casa revela sobre a causa raiz sob o prisma do tema "${theme}".
+       Explique o que a posição do dono da casa revela sobre a causa raiz sobre o prisma do tema "${theme}".
     
     4. **Análise de Campo e Geometria**: 
        Como os espelhamentos ou diagonais modulam essa energia focada em "${theme}"?
